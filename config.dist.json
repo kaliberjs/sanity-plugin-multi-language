@@ -1,0 +1,17 @@
+{
+  "defaultLanguage": "nl",
+  "languages": {
+    "nl": {
+      "title": "Nederlands",
+      "adjective": "Nederlandse",
+      "language": "nl",
+      "icu": "nl_NL"
+    },
+    "en": {
+      "title": "Engels (US)",
+      "adjective": "Engelse",
+      "language": "en",
+      "icu": "en_US"
+    }
+  }
+}
