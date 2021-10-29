@@ -1,8 +1,37 @@
 {
+  "name": "@kaliber/sanity-plugin-multi-language",
+  "version": "0.0.1",
+  "keywords": [
+    "sanity",
+    "sanity-plugin"
+  ],
+  "license": "MIT",
+  "main": "lib/multi-language.js",
+  "files": [
+    "src/**",
+    "lib/**",
+    "sanity.json",
+    "config.dist.json",
+    "LICENCE",
+    "package.json",
+    "readme.md"
+  ],
+  "scripts": {
+    "build": "sanipack build",
+    "watch": "sanipack build --watch",
+    "verify": "sanipack verify",
+    "prepublishOnly": "sanipack build && sanipack verify",
+    "prepare": "[ -f scripts/addPeerDependencies.js ] && node scripts/addPeerDependencies.js"
+  },
   "peerDependencies": {
+    "@sanity/validation": "^2.21.7",
     "groq": "^2.15.0",
+    "react": "^17.0.2",
     "react-icons": "^4.3.1",
     "react-query": "^3.29.0",
     "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "sanipack": "^2.1.0"
   }
 }

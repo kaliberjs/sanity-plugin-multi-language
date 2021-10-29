@@ -1,12 +1,7 @@
 {
-  "parts": [
-    {
-      "name": "part:@kaliber/multi-language",
-      "description": "Multi language"
-    },
-    {
-      "implements": "part:@kaliber/multi-language",
-      "path": "./multi-language.js"
-    }
-  ]
+  "parts": [],
+  "paths": {
+    "source": "./src",
+    "compiled": "./lib"
+  }
 }
