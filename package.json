@@ -16,6 +16,9 @@
     "package.json",
     "readme.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "sanipack build",
     "watch": "sanipack build --watch",
