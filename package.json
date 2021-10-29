@@ -36,5 +36,9 @@
   },
   "devDependencies": {
     "sanipack": "^2.1.0"
+  },
+  "dependencies": {
+    "@sanity/icons": "^1.2.1",
+    "@sanity/ui": "^0.36.12"
   }
 }

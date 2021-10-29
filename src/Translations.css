@@ -1,44 +1,19 @@
 @import 'part:@sanity/base/theme/variables-style';
 
-.component {
-  padding: 1rem;
-  padding-bottom: 4em;
-}
-
 .languages {
   padding: 0;
   list-style: none;
-
-  & > :not(:last-child) {
-    margin-bottom: 1em;
-  }
 }
 
-.componentLanguage {
-  & > .languageTitle {
-    margin-bottom: 0.5em;
-  }
+.language:not(:first-child) {
+  border-top: 1px solid var(--card-shadow-umbra-color);
 }
 
-.languageActions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-
-  & > :not(:last-child) {
-    margin-bottom: 0.5em;
-  }
-}
-
-.link {
-  background-color: var(--brand-faded);
-  border-radius: var(--border-radius-base);
-  color: inherit;
+.componentEditLink {
+  color: var(--brand-primary);
   text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.25em 0.5em;
+  border-radius: 4px;
+  width: auto;
 }
 
 .componentMissingTranslationsDialog {

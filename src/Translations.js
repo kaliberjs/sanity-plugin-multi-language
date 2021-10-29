@@ -1,18 +1,18 @@
-// TODO: @Peeke, hier meer sanity ui gebruiken?
-
 import React from 'react'
 import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from 'react-query'
 import * as uuid from 'uuid'
-import { FaCopy, FaPen } from 'react-icons/fa'
 import groq from 'groq'
 import { validateDocument } from '@sanity/validation'
-import Button from 'part:@sanity/components/buttons/default'
 import sanityClient from 'part:@sanity/base/client'
 import Preview from 'part:@sanity/base/preview'
 import { IntentLink } from 'part:@sanity/base/router'
 import schema from 'part:@sanity/base/schema'
 import Dialog from 'part:@sanity/components/dialogs/confirm'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
+
+import { Button, MenuButton, Menu, MenuItem, Container, Stack, Flex, Card, Text, Select } from '@sanity/ui'
+import { ComposeIcon, CopyIcon } from '@sanity/icons'
+
 // Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
 // import { reportError } from '../../../machinery/reportError'
 import styles from './Translations.css'
@@ -74,37 +74,37 @@ function Translations({ document: { displayed: document, draft, published } }) {
   })
 
   return (
-    <article className={styles.component}>
-      <h3>Vertalingen</h3>
-      {isLoading && <p>Laden...</p>}
-      {isError && <p>Er ging iets mis...</p>}
+    <Container width={1}>
+      <Card paddingX={4} paddingY={2}>
+        {isLoading && <p>Laden...</p>}
+        {isError && <p>Er ging iets mis...</p>}
+        {isSuccess && (
+          (published || draft)
+            ? <Languages
+                original={document}
+                {...{ translations, schemaType }}
+                onTranslateFresh={language => {
+                  addFreshTranslation({ original: document, language })
+                }}
+                onTranslateDuplicate={language => {
+                  addDuplicateTranslation({ original: document, language })
+                }}
+              />
+            : <Text>Het lijkt erop dat er nog niets is om te vertalen!</Text>
+        )}
 
-      {isSuccess && (
-        (published || draft)
-          ? <Languages
-              original={document}
-              {...{ translations, schemaType }}
-              onTranslateFresh={language => {
-                addFreshTranslation({ original: document, language })
-              }}
-              onTranslateDuplicate={language => {
-                addDuplicateTranslation({ original: document, language })
-              }}
-            />
-          : <p>Het lijkt erop dat er nog niets is om te vertalen!</p>
-      )}
-
-      {modal && (
-        <MissingTranslationsDialog
-          documents={modal.references}
-          onClose={() => setModal(null)}
-          canContinueWithoutReferences={modal.cleanDuplicate}
-          onContinue={() => {
-            addDuplicateTranslationsWithoutReferences({ original: modal.cleanDuplicate, language: modal.language })
-          }}
-        />
-      )}
-    </article>
+        {modal && (
+          <MissingTranslationsDialog
+            documents={modal.references}
+            onClose={() => setModal(null)}
+            canContinueWithoutReferences={modal.cleanDuplicate}
+            onContinue={() => {
+              addDuplicateTranslationsWithoutReferences({ original: modal.cleanDuplicate, language: modal.language })
+            }}
+          />
+        )}
+      </Card>
+    </Container>
   )
 
   function showUntranslatedReferences(data) {
@@ -125,20 +125,23 @@ function Languages({ original, translations, schemaType, onTranslateFresh, onTra
         const document = translations[language]
         const isCurrentDocument = document?._id === original._id
         return (
-          <Language
-            key={language}
-            title={pluginConfig.languages[language].title}
-            {...{ isCurrentDocument }}
-          >
-            {document
-              ? <EditLink {...{ document, schemaType }} />
-              : <TranslateActions
-                  {...{ language } }
-                  onClickDuplicate={() => onTranslateDuplicate(language)}
-                  onClickFresh={() => onTranslateFresh(language)}
-                />
-            }
-          </Language>
+          <li className={styles.language} key={language}>
+            <Card paddingY={2}>
+              <Language
+                title={pluginConfig.languages[language].title}
+                {...{ isCurrentDocument }}
+              >
+                {document
+                  ? <EditLink {...{ document, schemaType }} />
+                  : <TranslateActions
+                      {...{ language } }
+                      onClickDuplicate={() => onTranslateDuplicate(language)}
+                      onClickFresh={() => onTranslateFresh(language)}
+                    />
+                }
+              </Language>
+            </Card>
+          </li>
         )
       })}
     </ul>
@@ -147,38 +150,56 @@ function Languages({ original, translations, schemaType, onTranslateFresh, onTra
 
 function Language({ title, isCurrentDocument, children }) {
   return (
-    <li className={styles.componentLanguage}>
-      <div className={styles.languageTitle}>
-        {title}{isCurrentDocument && ' (huidig document)'}
-      </div>
+    <Flex align='center'>
+      <Card flex={1}>
+        <Stack space={1}>
+          <Text weight='bold'>{title}</Text>
+          {isCurrentDocument && <Text muted size={1}>Huidig document</Text>}
+        </Stack>
+      </Card>
 
-      {children}
-    </li>
+      <Card flex={3}>
+        {children}
+      </Card>
+    </Flex>
   )
 }
 
 function EditLink({ document, schemaType }) {
   return (
     <IntentLink
-      className={styles.link}
+      className={styles.componentEditLink}
       intent="edit"
       params={{ id: document._id, type: document._type }}
     >
-      <Preview value={document} type={schemaType} />
+      <Preview fontSize={1} value={document} type={schemaType} />
     </IntentLink>
   )
 }
 
 function TranslateActions({ onClickDuplicate, onClickFresh, language }) {
   return (
-    <div className={styles.languageActions}>
-      <Button onClick={onClickDuplicate} icon={FaCopy}>
-        {pluginConfig.languages[language].adjective} kopie maken
-      </Button>
-      <Button onClick={onClickFresh} icon={FaPen}>
-        Nieuw document aanmaken
-      </Button>
-    </div>
+    <Stack space={1}>
+      <Flex padding={[2, 0]} justify='space-between' align='center'>
+        <Card marginLeft={2}>
+          <Text>Geen vertaling</Text>
+        </Card>
+
+        <MenuButton
+          button={<Button text='Vertalen' />}
+          tone='positive'
+          id={`translate-${language}`}
+          menu={(
+            <Menu>
+              <MenuItem icon={CopyIcon} tone='positive' text='Kopie maken van dit document' onClick={onClickDuplicate} />
+              <MenuItem icon={ComposeIcon} tone='caution' text='Blanco vertaling starten' onClick={onClickFresh} />
+            </Menu>
+          )}
+          placement='left'
+          popover={{portal: true}}
+        />
+      </Flex>
+    </Stack>
   )
 }
 
@@ -293,7 +314,7 @@ async function addDuplicatedTranslation({ original, language }) {
 async function createDuplicateTranslation({ original, language }) {
   const { _id, _createdAt, _rev, _updatedAt, ...document } = original
   const { translationId } = document
-console.log(document)
+
   const [, duplicate] = await Promise.all([
     sanityClient.patch(_id).setIfMissing({ translationId }).commit(), // TODO: kan dit echt gebeuren?
     sanityClient.create({
