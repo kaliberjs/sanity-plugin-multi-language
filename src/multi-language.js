@@ -2,6 +2,7 @@ import * as uuid from 'uuid'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
 
 export { Translations, typeHasLanguage } from './Translations'
+export { multiLanguageDocumentList } from './multiLanguageDocumentList'
 
 export function withMultipleLanguages({ fieldset = undefined } = {}) {
   return schema => {

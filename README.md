@@ -25,7 +25,17 @@ Document level translations.
 `admin/deskStructure.js`
 
 ```js
-import { Translations, typeHasLanguage } from '@kaliber/sanity-plugin-multi-language'
+import { Translations, typeHasLanguage, multiLanguageDocumentList } from '@kaliber/sanity-plugin-multi-language'
+
+const paginas = multiLanguageDocumentList({ schemaType: 'pagina', titleField: 'titel', id: 'paginas' })
+
+export default function structure() {
+  return S.list().title('Menu').items([
+    S.listItem().title(`Pagina's`).child(
+      paginas
+    )
+  ])
+}
 
 export function getDefaultDocumentNode({ schemaType }) {
   return S.document().views([

@@ -161,8 +161,8 @@ function EditLink({ document, schemaType }) {
   return (
     <IntentLink
       className={styles.link}
-      intent="edit"
-      params={{ id: document._id, type: document._type }}
+      intent='edit'
+      params={{ id: document.translationId, type: document._type }}
     >
       <Preview value={document} type={schemaType} />
     </IntentLink>

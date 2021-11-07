@@ -27,14 +27,20 @@
     "prepare": "[ -f scripts/addPeerDependencies.js ] && node scripts/addPeerDependencies.js"
   },
   "peerDependencies": {
+    "@sanity/desk-tool": "^2.21.9",
+    "@sanity/ui": "^0.36.14",
     "@sanity/validation": "^2.21.7",
     "groq": "^2.15.0",
     "react": "^17.0.2",
     "react-icons": "^4.3.1",
-    "react-query": "^3.29.0",
+    "react-query": "^3.32.1",
+    "rxjs": "^7.4.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
     "sanipack": "^2.1.0"
+  },
+  "dependencies": {
+    "country-flag-icons": "^1.4.11"
   }
 }
