@@ -7,12 +7,11 @@ import {usePaneRouter} from '@sanity/desk-tool'
 
 const knownLanguages = Object.keys(pluginConfig.languages)
 
-export function Title({ document, translations, titleField, onDocumentClick }) {
-  // const document = useRxjsValue(document$)
+export function Title({ title, document, translations, onDocumentClick }) {
   return (
     <Flex gap={4} justify='space-between'>
       <Box flex='1 1' style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {document[titleField]}
+        {title}
       </Box>
 
       <Box flex='0 0 auto'>
