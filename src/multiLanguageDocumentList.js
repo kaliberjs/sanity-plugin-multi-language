@@ -1,48 +1,183 @@
 import S from '@sanity/desk-tool/structure-builder'
 import { liveDocuments } from '@kaliber/sanity-live-documents'
-import { map, shareReplay } from 'rxjs/operators'
+import { map } from 'rxjs/operators'
 import React from 'react'
 import * as rxjs from 'rxjs'
 import { Title } from './Title'
 import schema from 'part:@sanity/base/schema'
-import {ComposeIcon} from '@sanity/icons'
+import { usePane, usePaneLayout } from '@sanity/desk-tool/lib/components'
+import { usePaneRouter } from '@sanity/desk-tool'
+import { ListPaneContent } from './machinery/sanity/ListPaneContent'
+import { PaneItem } from './machinery/sanity/PaneItem'
+import { useDeskToolSettings } from './machinery/sanity/useDeskToolSettings'
 
-export function multiLanguageDocumentList({ schemaType, id, titleField, spec = undefined }) {
-  const type = schema.get(schemaType)
-  /** @type {rxjs.Observable<any>} - you can remove this in your spare time */
-  const documents$ = liveDocuments({ schemaType })
-  const liveTranslationGroups = documents$
-    .pipe(
-      map(toTranslationGroups),
-      shareReplay({ bufferSize:1, refCount: false })
+export function multiLanguageDocumentList(listBuilder) {
+  const serializedListBuilder = listBuilder.serialize()
+
+  const document$ = new rxjs.BehaviorSubject({ _type: serializedListBuilder.schemaTypeName })
+  const component = React.memo(React.forwardRef(MultiLanguageDocumentList))
+  return {
+    ...serializedListBuilder,
+    type: 'component', component,
+    key: serializedListBuilder.id, // override the key to prevent an unmount / mount cycle
+    document$,
+    child: document$.pipe(
+      map(doc =>
+        getDocumentNode({ schemaType: doc._type, documentId: doc._id })
+          .id(doc.translationId || 'unknown')
+      )
     )
-S.defaultInitialValueTemplateItems
-  return liveTranslationGroups.pipe(
-    map(translations =>
-      S.list(spec).id(id)
-        .items(
-          translations.map(({ translations, translationId }) => {
-            const [first] = translations
+    // Ik denk dat we in de actiebalk vlaggetjes moeten plaatsen waarmee je kunt switchen voor de display van de taal (tenzij een document niet beschikbaar is in die taal)
+  }
+}
 
-            const document$ = new rxjs.BehaviorSubject(first)
+const defaultOrdering = {by: [{field: '_createdAt', direction: 'desc'}]}
 
-            const title = (
-              <Title
-                {...{ titleField, document$, translations }}
-                onDocumentClick={doc => document$.next(doc)}
-              />
-            )
-            const child = document$.pipe(
-              map(doc => getDocumentNode({ schemaType, documentId: doc._id }).id(translationId))
-            )
-            /** @type {any} - you can remove this in your spare time */
-            const listItem = { id: translationId, child, title, type: 'listItem' }
-            return listItem
-          })
-        )
-    ),
-    shareReplay({ bufferSize: 1, refCount: false })
+function MultiLanguageDocumentList(props, ref) {
+  console.log('render')
+  console.log(props)
+  const { isActive, childItemId, schemaTypeName, displayOptions, defaultLayout = 'default', document$ } = props
+
+  console.log(usePane())
+  console.log(usePaneRouter())
+  console.log(usePaneLayout())
+
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      actionHandlers: {
+        // ...
+      }
+    }),
+    []
   )
+
+  const [layout, setLayout] = useDeskToolSettings(schemaTypeName, 'layout', defaultLayout)
+  const [sortOrder, setSortOrder] = useDeskToolSettings(schemaTypeName, 'sortOrder', defaultOrdering)
+
+  // const actionHandlers: Record<string, DeskToolPaneActionHandler> = useMemo(
+  //   () => ({
+  //     setLayout: ({layout: value}: {layout: Layout}) => {
+  //       setLayout(value)
+  //     },
+  //     setSortOrder: (sort: SortOrder) => {
+  //       setSortOrder(sort)
+  //     },
+  //   }),
+  //   [setLayout, setSortOrder]
+  // )
+
+  const error = null
+  const documents = useLiveDocuments({ schemaType: schemaTypeName })
+  const items = React.useMemo(
+    () => toTranslationGroups(documents || []),
+    [documents]
+  )
+  const renderItem = React.useCallback(
+    (item) => (
+      <TranslationPaneItem
+        {...{ item, document$, isActive, layout }}
+        icon={displayOptions.showIcons === false ? false : undefined}
+        isSelected={childItemId === item.translationId}
+        schemaType={schema.get(schemaTypeName)}
+      />
+    ),
+    [childItemId, isActive, layout, displayOptions.showIcons, document$]
+  )
+
+  return <ListPaneContent
+    {...{ items, error, renderItem, getItemKey }}
+    onRetry={handleRetry}
+    onListChange={handleListChange}
+  />
+
+  function handleListChange(...args) {
+    console.log('handleListChange')
+    console.log(args)
+  }
+
+  function handleRetry(...args) {
+    console.log('handleRetry')
+    console.log(args)
+  }
+}
+
+function TranslationPaneItem({ schemaType, item, document$, isSelected, isActive, icon, layout }) {
+  const pressed = !isActive && isSelected
+  const selected = isActive && isSelected
+
+  useSetDocumentOnSelect({ selected, item, document$})
+  const previewValue = useTranslationPreviewValue({
+    item,
+    getTitle: doc => doc.titel, // determine title field using schema preview
+    onDocumentClick: doc => document$.next(doc)
+  })
+  return (
+    <PaneItem
+      {...{ schemaType, icon, pressed, selected, layout, previewValue }}
+      id={item.translationId}
+    />
+  )
+}
+
+function useSetDocumentOnSelect({ item, selected, document$ }) {
+  const [first] = item.translations
+
+  React.useEffect(
+    () => {
+      if (!selected) return
+
+      document$.next(first)
+    },
+    [selected, first]
+  )
+}
+
+function useTranslationPreviewValue({ item, onDocumentClick, getTitle }) {
+  const [first] = item.translations
+  const [document, setDocument] = React.useState(first)
+  const onDocumentClickRef = React.useRef(null)
+  onDocumentClickRef.current = onDocumentClick
+
+  const getTitleRef = React.useRef(null)
+  getTitleRef.current = getTitle
+  const stableGetTitle = React.useCallback((...args) => getTitleRef.current(...args), [])
+
+  const value = React.useMemo(
+    () => ({
+      title: (
+        <Title
+          {...{ document }}
+          title={stableGetTitle(document)}
+          translations={item.translations}
+          onDocumentClick={doc => {
+            setDocument(doc)
+            onDocumentClickRef.current(doc)
+          }}
+        />
+      ),
+      // media, subtitle, description
+    }),
+    [document, item, onDocumentClick]
+  )
+  return value
+}
+
+function getItemKey(x) { return x.translationId }
+
+function useLiveDocuments({ schemaType }) {
+  const [documents, setDocuments] = React.useState(null)
+
+  React.useEffect(
+    () => {
+      const documents$ = liveDocuments({ schemaType })
+      const subscription = documents$.subscribe(setDocuments)
+      return () => subscription.unsubscribe()
+    },
+    [schemaType]
+  )
+
+  return documents
 }
 
 function getDocumentNode({ schemaType, documentId }) {
@@ -54,16 +189,20 @@ function getDocumentNode({ schemaType, documentId }) {
   )
 
   const builder = userBuilder ?? S.document()
-  return builder
-    .documentId(documentId)
-    .schemaType(schemaType)
+
+  const builderWithDocumentId = documentId ? builder.documentId(documentId) : builder
+  return builderWithDocumentId.schemaType(schemaType)
 }
 
 function toTranslationGroups(a) {
   const byTranslationId = groupBy(a, x => x.translationId)
 
   const translationGroups = Object.entries(byTranslationId).map(
-    ([translationId, translations]) => ({ translationId, translations: filterAndSort(translations) })
+    ([translationId, unsortedTranslations]) => {
+      const translations = filterAndSort(unsortedTranslations)
+
+      return { translationId, translations }
+    }
   )
 
   return translationGroups
