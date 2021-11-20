@@ -40,13 +40,14 @@ export function multiLanguageDocumentList(listBuilder) {
 const defaultOrdering = {by: [{field: '_createdAt', direction: 'desc'}]}
 
 function MultiLanguageDocumentList(props, ref) {
-  console.log('render')
-  console.log(props)
   const { isActive, childItemId, schemaTypeName, displayOptions, defaultLayout = 'default', document$ } = props
 
-  console.log(usePane())
-  console.log(usePaneRouter())
-  console.log(usePaneLayout())
+  console.log('== render ==')
+  console.log('props', props)
+  console.log('usePane', usePane())
+  console.log('usePaneRouter', usePaneRouter())
+  console.log('usePaneLayout', usePaneLayout())
+  console.log('== ==')
 
   // React.useImperativeHandle(
   //   ref,
@@ -100,13 +101,11 @@ function MultiLanguageDocumentList(props, ref) {
   />
 
   function handleListChange(...args) {
-    console.log('handleListChange')
-    console.log(args)
+    console.log('handleListChange', args)
   }
 
   function handleRetry(...args) {
-    console.log('handleRetry')
-    console.log(args)
+    console.log('handleRetry', args)
   }
 }
 

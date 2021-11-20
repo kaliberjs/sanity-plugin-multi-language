@@ -293,7 +293,7 @@ async function addDuplicatedTranslation({ original, language }) {
 async function createDuplicateTranslation({ original, language }) {
   const { _id, _createdAt, _rev, _updatedAt, ...document } = original
   const { translationId } = document
-console.log(document)
+
   const [, duplicate] = await Promise.all([
     sanityClient.patch(_id).setIfMissing({ translationId }).commit(), // TODO: kan dit echt gebeuren?
     sanityClient.create({
