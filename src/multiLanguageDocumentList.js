@@ -10,22 +10,28 @@ import { usePaneRouter } from '@sanity/desk-tool'
 import { ListPaneContent } from './machinery/sanity/ListPaneContent'
 import { PaneItem } from './machinery/sanity/PaneItem'
 import { useDeskToolSettings } from './machinery/sanity/useDeskToolSettings'
+import * as uuid from 'uuid'
 
 export function multiLanguageDocumentList(listBuilder) {
   const serializedListBuilder = listBuilder.serialize()
 
-  const document$ = new rxjs.BehaviorSubject({ _type: serializedListBuilder.schemaTypeName })
+  const emptyDoc = { _type: serializedListBuilder.schemaTypeName }
+  const document$ = new rxjs.BehaviorSubject(emptyDoc)
   const component = React.memo(React.forwardRef(MultiLanguageDocumentList))
+
   return {
     ...serializedListBuilder,
     type: 'component', component,
     key: serializedListBuilder.id, // override the key to prevent an unmount / mount cycle
     document$,
-    child: document$.pipe(
-      map(doc =>
-        getDocumentNode({ schemaType: doc._type, documentId: doc._id })
-          .id(doc.translationId || 'unknown')
-      )
+    child: translationId => document$.pipe(
+      map(_doc => {
+        const docValid = _doc.translationId && _doc.translationId === translationId
+        const doc = docValid ? _doc : emptyDoc
+        return getDocumentNode({ schemaType: doc._type, documentId: doc._id || uuid.v4() })
+          .id(doc.translationId || translationId)
+          .initialValueTemplate(serializedListBuilder.schemaTypeName, { translationId })
+      })
     )
     // Ik denk dat we in de actiebalk vlaggetjes moeten plaatsen waarmee je kunt switchen voor de display van de taal (tenzij een document niet beschikbaar is in die taal)
   }
@@ -42,15 +48,17 @@ function MultiLanguageDocumentList(props, ref) {
   console.log(usePaneRouter())
   console.log(usePaneLayout())
 
-  React.useImperativeHandle(
-    ref,
-    () => ({
-      actionHandlers: {
-        // ...
-      }
-    }),
-    []
-  )
+  // React.useImperativeHandle(
+  //   ref,
+  //   () => ({
+  //     actionHandlers: {
+  //       create(...args) {
+  //         console.log('CREATE', args)
+  //       }
+  //     }
+  //   }),
+  //   []
+  // )
 
   const [layout, setLayout] = useDeskToolSettings(schemaTypeName, 'layout', defaultLayout)
   const [sortOrder, setSortOrder] = useDeskToolSettings(schemaTypeName, 'sortOrder', defaultOrdering)
@@ -136,6 +144,10 @@ function useSetDocumentOnSelect({ item, selected, document$ }) {
 function useTranslationPreviewValue({ item, onDocumentClick, getTitle }) {
   const [first] = item.translations
   const [document, setDocument] = React.useState(first)
+
+  const currentDocument = item.translations.find(x => x._id === document._id)
+  if (currentDocument && currentDocument !== document) console.log('updating document', currentDocument) || setDocument(currentDocument)
+
   const onDocumentClickRef = React.useRef(null)
   onDocumentClickRef.current = onDocumentClick
 
