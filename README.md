@@ -27,12 +27,12 @@ Document level translations.
 ```js
 import { Translations, typeHasLanguage, multiLanguageDocumentList } from '@kaliber/sanity-plugin-multi-language'
 
-const paginas = multiLanguageDocumentList({ schemaType: 'pagina', titleField: 'titel', id: 'paginas' })
-
 export default function structure() {
   return S.list().title('Menu').items([
     S.listItem().title(`Pagina's`).child(
-      paginas
+      multiLanguageDocumentList(
+        S.documentTypeList('pagina').title(`Pagina's`)
+      )
     )
   ])
 }
