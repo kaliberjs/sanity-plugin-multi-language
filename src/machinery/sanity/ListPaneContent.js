@@ -89,8 +89,11 @@ function LoadingDocuments() {
 function List({ items, renderItem, onListChange, getItemKey }) {
   const hasMoreItems = items.length === FULL_LIST_LIMIT
   const { collapsed, index } = usePane()
+
+  const hackRef = useHackToSetMaxWidth('500px')
+
   return (
-    <Box padding={2}>
+    <Box ref={hackRef} padding={2}>
       <VirtualList
         gap={1}
         getItemKey={getItemKey}
@@ -130,5 +133,22 @@ function Delay({ children, ms = 0, }) {
     !ready || !children ? null :
     typeof children === 'function' ? children() :
     children
+  )
+}
+
+function useHackToSetMaxWidth(maxWidth) {
+  return React.useCallback(
+    element => {
+      const pane = findPane(element)
+      if (pane) pane.style.maxWidth = maxWidth
+
+      function findPane(element) {
+        if (!element) return element
+        if (element.dataset.testid === 'pane') return element
+        const { parentElement } = element
+        return parentElement && findPane(parentElement)
+      }
+    },
+    []
   )
 }
