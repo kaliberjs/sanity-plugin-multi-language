@@ -23,24 +23,23 @@
     "build": "sanipack build",
     "watch": "sanipack build --watch",
     "verify": "sanipack verify",
-    "prepublishOnly": "sanipack build && sanipack verify",
-    "prepare": "[ -f scripts/addPeerDependencies.js ] && node scripts/addPeerDependencies.js"
-  },
-  "peerDependencies": {
-    "@sanity/desk-tool": "^2.21.9",
-    "@sanity/ui": "^0.36.14",
-    "@sanity/validation": "^2.21.7",
-    "groq": "^2.15.0",
-    "react": "^17.0.2",
-    "react-icons": "^4.3.1",
-    "react-query": "^3.32.1",
-    "rxjs": "^7.4.0",
-    "uuid": "^8.3.2"
+    "prepublishOnly": "sanipack build && sanipack verify"
   },
   "devDependencies": {
     "sanipack": "^2.1.0"
   },
   "dependencies": {
-    "country-flag-icons": "^1.4.11"
+    "@sanity/desk-tool": "^2.23.0",
+    "@sanity/ui": "^0.36.17",
+    "@sanity/validation": "^2.23.0",
+    "country-flag-icons": "^1.4.11",
+    "groq": "^2.15.0",
+    "react": "^17.0.2",
+    "react-icons": "^4.3.1",
+    "react-query": "^3.34.3",
+    "rxjs": "^7.4.0",
+    "uuid": "^8.3.2",
+    "@sanity/icons": "^1.2.2", 
+    "styled-components": "^5.2.0"
   }
 }

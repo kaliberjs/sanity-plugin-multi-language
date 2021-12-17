@@ -1,7 +1,10 @@
 import S from '@sanity/desk-tool/structure-builder'
+import { Flex, Box, Menu, MenuButton, MenuItem, Button } from '@sanity/ui'
+import { SelectIcon } from '@sanity/icons'
 import { liveDocuments } from '@kaliber/sanity-live-documents'
 import { map } from 'rxjs/operators'
 import React from 'react'
+import Flags from 'country-flag-icons/react/3x2'
 import * as rxjs from 'rxjs'
 import { Title } from './Title'
 import schema from 'part:@sanity/base/schema'
@@ -10,7 +13,10 @@ import { usePaneRouter } from '@sanity/desk-tool'
 import { ListPaneContent } from './machinery/sanity/ListPaneContent'
 import { PaneItem } from './machinery/sanity/PaneItem'
 import { useDeskToolSettings } from './machinery/sanity/useDeskToolSettings'
+import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
 import * as uuid from 'uuid'
+
+const knownLanguages = Object.keys(pluginConfig.languages)
 
 export function multiLanguageDocumentList(listBuilder) {
   const serializedListBuilder = listBuilder.serialize()
@@ -18,26 +24,43 @@ export function multiLanguageDocumentList(listBuilder) {
   const emptyDoc = { _type: serializedListBuilder.schemaTypeName }
   const document$ = new rxjs.BehaviorSubject(emptyDoc)
   const component = React.memo(React.forwardRef(MultiLanguageDocumentList))
-
+  console.log('-->', serializedListBuilder)
   return {
     ...serializedListBuilder,
-    type: 'component', component,
+    type: 'component',
+    component,
     key: serializedListBuilder.id, // override the key to prevent an unmount / mount cycle
+    menuItems: [
+      ...serializedListBuilder.menuItems,
+      {
+        action: () => console.log('NL'),
+        group: 'layout',
+        icon: () => <div style={{ width: '1rem' }}><Flags.NL /></div>,
+        showAsAction: true,
+        title: 'Nederlands'
+      }
+    ],
     document$,
     child: translationId => document$.pipe(
       map(_doc => {
         const docValid = _doc.translationId && _doc.translationId === translationId
         const doc = docValid ? _doc : emptyDoc
-        return getDocumentNode({ schemaType: doc._type, documentId: doc._id || uuid.v4() })
+
+        const r = getDocumentNode({ schemaType: doc._type, documentId: doc._id || uuid.v4() })
           .id(doc.translationId || translationId)
           .initialValueTemplate(serializedListBuilder.schemaTypeName, { translationId })
+
+        return {
+          ...r.serialize(),
+          title: <DocumentTitle language={doc.language}>{doc.title}</DocumentTitle> // TODO: ophalen op basis van preview
+        }
       })
     )
     // Ik denk dat we in de actiebalk vlaggetjes moeten plaatsen waarmee je kunt switchen voor de display van de taal (tenzij een document niet beschikbaar is in die taal)
   }
 }
 
-const defaultOrdering = {by: [{field: '_createdAt', direction: 'desc'}]}
+const defaultOrdering = { by: [{ field: '_createdAt', direction: 'desc' }] }
 
 function MultiLanguageDocumentList(props, ref) {
   const { isActive, childItemId, schemaTypeName, displayOptions, defaultLayout = 'default', document$ } = props
@@ -113,10 +136,10 @@ function TranslationPaneItem({ schemaType, item, document$, isSelected, isActive
   const pressed = !isActive && isSelected
   const selected = isActive && isSelected
 
-  useSetDocumentOnSelect({ selected, item, document$})
+  useSetDocumentOnSelect({ selected, item, document$ })
   const previewValue = useTranslationPreviewValue({
     item,
-    getTitle: doc => doc.titel, // determine title field using schema preview
+    getTitle: doc => doc.title, // determine title field using schema preview
     onDocumentClick: doc => document$.next(doc)
   })
   return (
@@ -245,5 +268,48 @@ function groupBy(a, getGroupByValue) {
       return result
     },
     {}
+  )
+}
+
+function DocumentTitle({ children, language }) {
+  const config = pluginConfig.languages[language]
+  const [languagePart, countryPart] = config.icu.split('_')
+  const Flag = Flags[countryPart]
+
+  return (
+    <Flex gap={4} align='center'>
+      <div>{children}</div>
+
+      <MenuButton
+        id="language-switch"
+        button={
+          <Button
+            fontSize={1}
+            padding={2}
+            mode='bleed'
+            icon={() => <Flag style={{ width: '1em', margin: '0.2em 0', display: 'block' }} />}
+            iconRight={SelectIcon}
+            text={pluginConfig.languages[language].title}
+          />
+        }
+        menu={(
+          <Menu>
+            {knownLanguages.map(x => {
+              const config = pluginConfig.languages[x]
+              const [languagePart, countryPart] = config.icu.split('_')
+              const Flag = Flags[countryPart]
+              return <MenuItem text={
+                <Flex gap={2}>
+                  <Flag style={{ width: '1em', margin: '0.2em 0', display: 'block' }} />
+                  <Box>{config.title}</Box>
+                </Flex>
+              } />
+            })}
+          </Menu>
+        )}
+        placement='bottom'
+        popover={{portal: true}}
+      />
+    </Flex>
   )
 }

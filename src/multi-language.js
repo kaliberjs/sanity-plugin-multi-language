@@ -1,5 +1,6 @@
 import * as uuid from 'uuid'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
+import { MultiLanguageInput } from './MultiLanguageInput'
 
 export { Translations, typeHasLanguage } from './Translations'
 export { multiLanguageDocumentList } from './multiLanguageDocumentList'
@@ -23,7 +24,8 @@ function addFieldsToSchema(schema, { fieldset }) {
     type: 'string',
     fieldset,
     readOnly: true,
-    hidden: process.env.NODE_ENV === 'production'
+    hidden: true,
+    inputComponent: MultiLanguageInput
   }
 
   const translationId = {
@@ -38,7 +40,7 @@ function addFieldsToSchema(schema, { fieldset }) {
 
   return {
     ...schema,
-    fields: [...schema.fields, language, translationId],
+    fields: [language, ...schema.fields, translationId],
     initialValue: newInitialValue
   }
 
