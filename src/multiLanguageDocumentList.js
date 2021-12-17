@@ -273,7 +273,7 @@ function groupBy(a, getGroupByValue) {
 
 function DocumentTitle({ children, language }) {
   const config = pluginConfig.languages[language]
-  const [languagePart, countryPart] = config.icu.split('_')
+  const [languagePart, countryPart] = config ? config.icu.split('_') : []
   const Flag = Flags[countryPart]
 
   return (
@@ -296,7 +296,7 @@ function DocumentTitle({ children, language }) {
           <Menu>
             {knownLanguages.map(x => {
               const config = pluginConfig.languages[x]
-              const [languagePart, countryPart] = config.icu.split('_')
+              const [languagePart, countryPart] = config ? config.icu.split('_') : []
               const Flag = Flags[countryPart]
               return <MenuItem text={
                 <Flex gap={2}>
