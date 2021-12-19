@@ -1,13 +1,8 @@
 // TODO: @Peeke, hier meer sanity ui gebruiken?
 
 import React from 'react'
-import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from 'react-query'
 import * as uuid from 'uuid'
-import { FaCopy, FaPen } from 'react-icons/fa'
 import groq from 'groq'
-import { validateDocument } from '@sanity/validation'
-import Button from 'part:@sanity/components/buttons/default'
-import sanityClient from 'part:@sanity/base/client'
 import Preview from 'part:@sanity/base/preview'
 import { IntentLink } from 'part:@sanity/base/router'
 import schema from 'part:@sanity/base/schema'
@@ -15,145 +10,173 @@ import Dialog from 'part:@sanity/components/dialogs/confirm'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
 // Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
 // import { reportError } from '../../../machinery/reportError'
+import { Flex, Box, Menu, MenuButton, MenuItem, Button } from '@sanity/ui'
+import { SelectIcon } from '@sanity/icons'
+import Flags from 'country-flag-icons/react/3x2'
+import sanityClient from 'part:@sanity/base/client'
+import { liveDocuments } from '@kaliber/sanity-live-documents'
+
 import styles from './Translations.css'
+
+const knownLanguages = Object.keys(pluginConfig.languages)
 
 function reportError(e) {
   console.error(e)
   // TODO: report to rollbar
 }
 
-const queryClient = new QueryClient()
-
-export { TranslationsWithQueryClient as Translations }
-function TranslationsWithQueryClient({ document }) {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <Translations {...{ document }} />
-    </QueryClientProvider>
-  )
-}
-
 export function typeHasLanguage(type) {
   return schema.get(type).fields.some(x => x.name === 'language')
 }
 
-function Translations({ document: { displayed: document, draft, published } }) {
+export function TranslationMenu({ document$, language, schemaTypeName, translationId }) {
+  const config = pluginConfig.languages[language]
+  const [languagePart, countryPart] = config ? config.icu.split('_') : []
+  const Flag = Flags[countryPart]
+
+  const translationLookup = useTranslationLookup({ translationId })
   const [modal, setModal] = React.useState(null)
-  const schemaType = schema.get(document._type)
 
-  const queryClient = useQueryClient()
-  const { data, isLoading, isSuccess, isError } = useQuery({
-    queryKey: ['translations', { document }],
-    queryFn: getTranslations,
-    onError: onQueryError
-  })
-  const translations = data ?? []
-
-  // TODO: Show toast on error
-
-  const { mutate: addFreshTranslation } = useMutation({
-    mutationFn: translateFresh,
-    onSuccess() { queryClient.invalidateQueries(['translations']) },
-    onError: onQueryError
-  })
-
-  const { mutate: addDuplicateTranslation } = useMutation({
-    mutationFn: translateDuplicate,
-    onSuccess({ status, data }) {
-      if (status === 'success') queryClient.invalidateQueries(['translations'])
-      else if (status === 'untranslatedReferencesFound') showUntranslatedReferences(data)
-    },
-    onError: onQueryError
-  })
-
-  const { mutate: addDuplicateTranslationsWithoutReferences } = useMutation({
-    mutationFn: translateDuplicateWithoutReferences,
-    onSuccess() { queryClient.invalidateQueries(['translations']) },
-    onError: onQueryError,
-    onSettled() { setModal(null) },
-  })
+  console.log({ translationLookup })
+  if (!config) return null
 
   return (
-    <article className={styles.component}>
-      <h3>Vertalingen</h3>
-      {isLoading && <p>Laden...</p>}
-      {isError && <p>Er ging iets mis...</p>}
-
-      {isSuccess && (
-        (published || draft)
-          ? <Languages
-              original={document}
-              {...{ translations, schemaType }}
-              onTranslateFresh={language => {
-                addFreshTranslation({ original: document, language })
-              }}
-              onTranslateDuplicate={language => {
-                addDuplicateTranslation({ original: document, language })
-              }}
-            />
-          : <p>Het lijkt erop dat er nog niets is om te vertalen!</p>
-      )}
-
+    <>
+      <MenuButton
+        id="language-switch"
+        button={
+          <Button
+            fontSize={1}
+            padding={2}
+            mode='bleed'
+            icon={() => <Flag style={{ width: '1em', margin: '0.2em 0', display: 'block' }} />}
+            iconRight={SelectIcon}
+            text={pluginConfig.languages[language].title}
+          />
+        }
+        menu={(
+          <Menu>
+            {knownLanguages.map(language => {
+              const translation = translationLookup[language]
+              return translation
+                ? (
+                  <FlagMenuItem
+                    key={language}
+                    determineTitle={x => x.title}
+                    {...{ language }}
+                    onClick={_ => document$.next(translation)}
+                  />
+                )
+                : (
+                  <React.Fragment key={language}>
+                    <FlagMenuItem
+                      determineTitle={x => `${x.adjective} kopie maken`}
+                      {...{ language }}
+                      onClick={_ =>
+                        translateDuplicate({ original: document$.getValue(), language })
+                          .then(({ status, data }) => {
+                            if (status === 'success') return
+                            if (status === 'untranslatedReferencesFound')
+                              return showUntranslatedReferences(data)
+                          })
+                          .catch(reportError)
+                      }
+                    />
+                    <FlagMenuItem
+                      determineTitle={x => `Nieuw ${x.title} document aanmaken`}
+                      {...{ language }}
+                      onClick={_ =>
+                        createNewDocumentAndSetActive({ language }).catch(e => console.error(e)) // TODO: report error
+                      }
+                    />
+                  </React.Fragment>
+                )
+            })}
+          </Menu>
+        )}
+        placement='bottom'
+        popover={{portal: true}}
+      />
       {modal && (
         <MissingTranslationsDialog
           documents={modal.references}
           onClose={() => setModal(null)}
           canContinueWithoutReferences={modal.cleanDuplicate}
           onContinue={() => {
-            addDuplicateTranslationsWithoutReferences({ original: modal.cleanDuplicate, language: modal.language })
+            translateDuplicateWithoutReferences({ original: modal.cleanDuplicate, language: modal.language })
+              .catch(reportError)
+              .then(_ => setModal(null))
           }}
         />
       )}
-    </article>
+    </>
   )
+
+  async function createNewDocumentAndSetActive({ language }) {
+    const schemaType = schema.get(schemaTypeName)
+    const newDoc = {
+      _type: schemaTypeName,
+      _id: `drafts.${uuid.v4()}`,
+      ...(await schemaType.initialValue({ language, translationId }))
+    }
+    console.log({ newDoc })
+
+    document$.next(newDoc)
+  }
 
   function showUntranslatedReferences(data) {
     const { references, cleanDuplicate, language } = data
     setModal({ references, cleanDuplicate, language })
   }
-
-  function onQueryError(e) {
-    reportError(e)
-    alert('Er iets mis, probeer het nog eens')
-  }
 }
 
-function Languages({ original, translations, schemaType, onTranslateFresh, onTranslateDuplicate }) {
+function FlagMenuItem({ language, onClick, determineTitle }) {
+  const config = pluginConfig.languages[language]
+  const [languagePart, countryPart] = config ? config.icu.split('_') : []
+  const Flag = Flags[countryPart]
+
   return (
-    <ul className={styles.languages}>
-      {Object.keys(pluginConfig.languages).map(language => {
-        const document = translations[language]
-        const isCurrentDocument = document?._id === original._id
-        return (
-          <Language
-            key={language}
-            title={pluginConfig.languages[language].title}
-            {...{ isCurrentDocument }}
-          >
-            {document
-              ? <EditLink {...{ document, schemaType }} />
-              : <TranslateActions
-                  {...{ language } }
-                  onClickDuplicate={() => onTranslateDuplicate(language)}
-                  onClickFresh={() => onTranslateFresh(language)}
-                />
-            }
-          </Language>
-        )
-      })}
-    </ul>
+    <MenuItem
+      {...{ onClick }}
+      text={
+        <Flex gap={2}>
+          <Flag style={{ width: '1em', margin: '0.2em 0', display: 'block' }} />
+          <Box>{determineTitle(config)}</Box>
+        </Flex>
+      }
+    />
   )
 }
 
-function Language({ title, isCurrentDocument, children }) {
-  return (
-    <li className={styles.componentLanguage}>
-      <div className={styles.languageTitle}>
-        {title}{isCurrentDocument && ' (huidig document)'}
-      </div>
+function useLiveDocuments({ filter }) {
+  const [documents, setDocuments] = React.useState(null)
 
-      {children}
-    </li>
+  React.useEffect(
+    () => {
+      const documents$ = liveDocuments({ filter })
+      const subscription = documents$.subscribe(setDocuments)
+      return () => subscription.unsubscribe()
+    },
+    [filter]
+  )
+
+  return documents
+}
+
+function useTranslationLookup({ translationId }) {
+  const translations = useLiveDocuments({ filter: `translationId == '${translationId}'` })
+  if (!translations) return {}
+
+  return translationsAsLookup(translations)
+}
+
+function translationsAsLookup(translations) {
+  return translations.reduce(
+    (result, translation) => {
+      if (!translation.language) throw new Error(`Found translation without a language:\n${JSON.stringify(translation, null, 2)}`)
+      return { ...result, [translation.language]: translation }
+    },
+    {}
   )
 }
 
@@ -166,19 +189,6 @@ function EditLink({ document, schemaType }) {
     >
       <Preview value={document} type={schemaType} />
     </IntentLink>
-  )
-}
-
-function TranslateActions({ onClickDuplicate, onClickFresh, language }) {
-  return (
-    <div className={styles.languageActions}>
-      <Button onClick={onClickDuplicate} icon={FaCopy}>
-        {pluginConfig.languages[language].adjective} kopie maken
-      </Button>
-      <Button onClick={onClickFresh} icon={FaPen}>
-        Nieuw document aanmaken
-      </Button>
-    </div>
   )
 }
 
@@ -215,44 +225,6 @@ function MissingTranslationsDialog({ documents, onClose, canContinueWithoutRefer
   )
 }
 
-async function getTranslations(context) {
-  const { queryKey: [, { document }] } = context
-  if (!document) return null
-
-  const { translationId } = document
-
-  if (!translationId) return null
-
-  const translations = await sanityClient.fetch(
-    groq`*[translationId == $translationId]`,
-    { translationId }
-  )
-
-  return translations.reduce(
-    (result, translation) => {
-      const language = translation.language ?? pluginConfig.defaultLanguage
-      return { ...result, [language]: translation }
-    },
-    {}
-  )
-}
-
-async function addFreshTranslation({ original, language }) {
-  const duplicateId = 'drafts.' + uuid.v5([language, original._id].join('.'), uuid.v5.URL)
-
-  const result = await sanityClient.create({
-    _type: original._type, _id: duplicateId, translationId: original.translationId, language
-  })
-
-  return { status: 'success', data: result }
-}
-
-async function translateFresh({ original, language }) {
-  const { status, data } = await addFreshTranslation({ original, language })
-  if (status === 'success') return { status, data }
-  throw new Error(`Failed to create fresh translation (${status})`)
-}
-
 async function translateDuplicate({ original, language }) {
   const { status, data } = await addDuplicatedTranslation({ original, language })
   if (['success', 'untranslatedReferencesFound'].includes(status)) return { status, data }
@@ -277,13 +249,15 @@ async function addDuplicatedTranslation({ original, language }) {
 
   async function untranslatedReferencesFound(untranslatedReferences) {
     const duplicate = removeExcludedReferences(original, untranslatedReferences.map(x => x._id))
-    const valid = (await validateDocument(duplicate, schema)).every(x => x.level !== 'error')
+    // @peeke dit gaf 1 of andere asset error, alsof `validateDocument` niet goed wordt aangeroepen, dit was de error:
+    // content[_key==\"34d3889b69ce\"].slides[_key==\"0dcf19edabae\"].asset: Exception occurred while validating value: `getDocumentExists` was not provided in validation context
+    // const valid = (await validateDocument(duplicate, schema)).every(x => console.log(x) || x.level !== 'error')
 
     return {
       status: 'untranslatedReferencesFound',
       data: {
         references: untranslatedReferences,
-        cleanDuplicate: valid ? duplicate : null,
+        cleanDuplicate: duplicate,
         language
       }
     }
@@ -392,7 +366,7 @@ function mapValues(o, f) {
 
 function removeExcludedReferences(data, exclude) {
   if (!data || typeof data !== 'object') return data
-  if (isReference(data) && exclude.includes(data._ref)) return null
+  if (isReference(data) && exclude.includes(data._ref)) return { _type: data._type }
 
   return Array.isArray(data)
     ? data.map(x => removeExcludedReferences(x, exclude)).filter(Boolean)
