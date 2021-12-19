@@ -49,11 +49,11 @@ function addFieldsToSchema(schema, { fieldset }) {
         : schema.initialValue
     )
 
-    const [{ translationId }] = args
+    const [{ translationId, language }] = args
 
     return {
       ...result,
-      language: pluginConfig.defaultLanguage,
+      language: language || pluginConfig.defaultLanguage,
       translationId: translationId || uuid.v4()
     }
   }
