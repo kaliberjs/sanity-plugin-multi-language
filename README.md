@@ -69,8 +69,10 @@ export const pagina = withMultipleLanguages()({
 ```
 
 ```
-admin/> yarn link @kaliber/sanity-plugin-multi-language
+project/admin/> yarn link @kaliber/sanity-plugin-multi-language
 ```
+
+Note: project needs `resolve.symlink: false` in webpack config.
 
 ## Publish
 
