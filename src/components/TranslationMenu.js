@@ -16,17 +16,13 @@ import Flags from 'country-flag-icons/react/3x2'
 import sanityClient from 'part:@sanity/base/client'
 import { liveDocuments } from '@kaliber/sanity-live-documents'
 
-import styles from './Translations.css'
+import styles from './TranslationMenu.css'
 
 const knownLanguages = Object.keys(pluginConfig.languages)
 
 function reportError(e) {
   console.error(e)
   // TODO: report to rollbar
-}
-
-export function typeHasLanguage(type) {
-  return schema.get(type).fields.some(x => x.name === 'language')
 }
 
 export function TranslationMenu({ document$, language, schemaTypeName, translationId }) {
