@@ -22,22 +22,24 @@ export function multiLanguageDocumentList(listBuilder) {
   const emptyDoc = { _type: schemaTypeName }
   const document$ = new rxjs.BehaviorSubject(emptyDoc)
   const component = React.memo(React.forwardRef(MultiLanguageDocumentList))
-  // TODO: matrix changed, create icon disappeared
   return {
     ...serializedListBuilder,
     type: 'component',
     component,
     key: serializedListBuilder.id, // override the key to prevent an unmount / mount cycle
-    // menuItems: [
-    //   ...serializedListBuilder.menuItems,
-    //   // {
-    //   //   action: 'switchSometing',
-    //   //   group: 'layout',
-    //   //   icon: () => <div style={{ width: '1rem' }}><Flags.NL /></div>,
-    //   //   showAsAction: true,
-    //   //   title: 'Nederlands'
-    //   // }
-    // ],
+    menuItems: [
+      ...serializedListBuilder.menuItems,
+      // {
+      //   action: 'switchSometing',
+      //   group: 'layout',
+      //   icon: () => <div style={{ width: '1rem' }}><Flags.NL /></div>,
+      //   showAsAction: true,
+      //   title: 'Nederlands'
+      // }
+      {
+        intent: { type: 'create', params: [{ type: schemaTypeName }, { language: pluginConfig.defaultLanguage }] }
+      }
+    ],
     document$,
     child: translationId => document$.pipe(
       map(_doc => {
