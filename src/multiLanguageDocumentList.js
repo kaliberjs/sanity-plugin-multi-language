@@ -29,15 +29,12 @@ export function multiLanguageDocumentList(listBuilder) {
     key: serializedListBuilder.id, // override the key to prevent an unmount / mount cycle
     menuItems: [
       ...serializedListBuilder.menuItems,
-      // {
-      //   action: 'switchSometing',
-      //   group: 'layout',
-      //   icon: () => <div style={{ width: '1rem' }}><Flags.NL /></div>,
-      //   showAsAction: true,
-      //   title: 'Nederlands'
-      // }
       {
-        intent: { type: 'create', params: [{ type: schemaTypeName }, { language: pluginConfig.defaultLanguage }] }
+        intent: {
+          type: 'create',
+          // this will become a challenge if we allow the list to be displaying different languages,
+          // in short: you can not use `intent` with dynamic values
+          params: [{ type: schemaTypeName }, { language: pluginConfig.defaultLanguage }] },
       }
     ],
     document$,
@@ -45,15 +42,13 @@ export function multiLanguageDocumentList(listBuilder) {
       map(_doc => {
         const docValid = _doc.translationId && _doc.translationId === translationId
         const doc = docValid ? _doc : { ...emptyDoc, translationId }
-        const language = doc.language
-        console.log({ docValid, doc })
+        const { language } = doc
         return getDocumentNode({ schemaType: doc._type, documentId: doc._id || uuid.v4() })
           .id(translationId)
           .initialValueTemplate(schemaTypeName, { translationId, language })
           .title(<DocumentTitle {...{ language, schemaTypeName, document$, translationId }}>{doc.title}</DocumentTitle>) // TODO: ophalen op basis van preview
       })
     )
-    // Ik denk dat we in de actiebalk vlaggetjes moeten plaatsen waarmee je kunt switchen voor de display van de taal (tenzij een document niet beschikbaar is in die taal)
   }
 }
 
@@ -68,36 +63,28 @@ function MultiLanguageDocumentList(props, ref) {
   console.log('usePaneRouter', usePaneRouter())
   console.log('usePaneLayout', usePaneLayout())
   console.log('== ==')
-
-  // React.useImperativeHandle(
-  //   ref,
-  //   () => ({
-  //     actionHandlers: {
-  //       switchSometing(...args) {
-  //         console.log('switchSometing', args)
-  //       }
-  //     }
-  //   }),
-  //   []
-  // )
-
+  const { setPayload } = usePaneRouter()
   const [layout, setLayout] = useDeskToolSettings(schemaTypeName, 'layout', defaultLayout)
   const [sortOrder, setSortOrder] = useDeskToolSettings(schemaTypeName, 'sortOrder', defaultOrdering)
 
-  // const actionHandlers: Record<string, DeskToolPaneActionHandler> = useMemo(
-  //   () => ({
-  //     setLayout: ({layout: value}: {layout: Layout}) => {
-  //       setLayout(value)
-  //     },
-  //     setSortOrder: (sort: SortOrder) => {
-  //       setSortOrder(sort)
-  //     },
-  //   }),
-  //   [setLayout, setSortOrder]
-  // )
+  React.useImperativeHandle(
+    ref,
+    () => {
+      // make sure we re-render the pane when providing actionhandlers
+      // https://github.com/sanity-io/sanity/issues/3025
+      setPayload({ forceRerender: uuid.v4() })
+      return {
+        actionHandlers: {
+          setLayout({layout }) { setLayout(layout) },
+          setSortOrder(sort) { setSortOrder(sort) },
+        }
+      }
+    },
+    []
+  )
 
   const error = null
-  const documents = useLiveDocuments({ schemaType: schemaTypeName })
+  const documents = useLiveDocuments({ schemaType: schemaTypeName, sortOrder })
   const items = React.useMemo(
     () => toTranslationGroups(documents || []),
     [documents]
@@ -161,7 +148,7 @@ function useSetDocumentOnSelect({ item, selected, document$ }) {
 }
 
 function useTranslationPreviewValue({ item, onDocumentClick, getTitle }) {
-  // TODO: if we want to be able to select another preview language this needs to change
+  // if we want to be able to select another preview language this needs to change
   const document = item.translations.find(x => x.language === pluginConfig.defaultLanguage)
   const getTitleRef = React.useRef(null)
   getTitleRef.current = getTitle
@@ -185,19 +172,30 @@ function useTranslationPreviewValue({ item, onDocumentClick, getTitle }) {
 
 function getItemKey(x) { return x.translationId }
 
-function useLiveDocuments({ schemaType }) {
+function useLiveDocuments({ schemaType, sortOrder }) {
   const [documents, setDocuments] = React.useState(null)
+
+  const order = React.useMemo(
+    () => toOrderClause(sortOrder.by),
+    [sortOrder]
+  )
 
   React.useEffect(
     () => {
-      const documents$ = liveDocuments({ filter: `_type == '${schemaType}'` })
+      const documents$ = liveDocuments({ filter: `_type == '${schemaType}'`, order })
       const subscription = documents$.subscribe(setDocuments)
       return () => subscription.unsubscribe()
     },
-    [schemaType]
+    [schemaType, order]
   )
 
   return documents
+
+  function toOrderClause(orderBy) {
+    return orderBy
+      .map(x => [x.field, (x.direction || '').toLowerCase()].filter(Boolean).join(' '))
+      .join(',')
+  }
 }
 
 function getDocumentNode({ schemaType, documentId }) {
