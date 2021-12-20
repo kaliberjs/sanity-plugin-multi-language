@@ -59,7 +59,7 @@ export function TranslationMenu({ document$, language, schemaTypeName, translati
             {knownLanguages.map(language => {
               const translation = translationLookup[language]
               return translation
-                ? (
+                ? (// TODO: we willen deze variant ook tonen wanneer we een nieuwe aan het maken zijn in de huidige taal. Onclick mag dan uitgezet worden
                   <FlagMenuItem
                     key={language}
                     determineTitle={x => x.title}
