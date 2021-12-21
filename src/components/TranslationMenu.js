@@ -6,17 +6,16 @@ import groq from 'groq'
 import Preview from 'part:@sanity/base/preview'
 import { IntentLink } from 'part:@sanity/base/router'
 import schema from 'part:@sanity/base/schema'
-import Dialog from 'part:@sanity/components/dialogs/confirm'
+import { typeHasLanguage } from '../schema/typeHasLanguage'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
 // Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
 // import { reportError } from '../../../machinery/reportError'
-import { Flex, Box, Menu, MenuButton, MenuItem, Button } from '@sanity/ui'
+import { Dialog, Stack, Card, Flex, Grid, Box, Text, Menu, MenuButton, MenuItem, Button } from '@sanity/ui'
+import { AddIcon } from '@sanity/icons'
 import { SelectIcon } from '@sanity/icons'
 import Flags from 'country-flag-icons/react/3x2'
 import sanityClient from 'part:@sanity/base/client'
 import { liveDocuments } from '@kaliber/sanity-live-documents'
-
-import styles from './TranslationMenu.css'
 
 const knownLanguages = Object.keys(pluginConfig.languages)
 
@@ -31,7 +30,8 @@ export function TranslationMenu({ document$, language, schemaTypeName, translati
   const Flag = Flags[countryPart]
 
   const translationLookup = useTranslationLookup({ translationId })
-  const [modal, setModal] = React.useState(null)
+  const [modalMissingTranslations, setModalMissingTranslations] = React.useState(null)
+  const [modalTranslationMode, setModalTranslationMode] = React.useState(null)
 
   console.log({ translationLookup })
   if (!config) return null
@@ -64,28 +64,12 @@ export function TranslationMenu({ document$, language, schemaTypeName, translati
                   />
                 )
                 : (
-                  <React.Fragment key={language}>
-                    <FlagMenuItem
-                      determineTitle={x => `${x.adjective} kopie maken`}
-                      {...{ language }}
-                      onClick={_ =>
-                        translateDuplicate({ original: document$.getValue(), language })
-                          .then(({ status, data }) => {
-                            if (status === 'success') return
-                            if (status === 'untranslatedReferencesFound')
-                              return showUntranslatedReferences(data)
-                          })
-                          .catch(reportError)
-                      }
-                    />
-                    <FlagMenuItem
-                      determineTitle={x => `Nieuw ${x.title} document aanmaken`}
-                      {...{ language }}
-                      onClick={_ =>
-                        createNewDocumentAndSetActive({ language }).catch(e => console.error(e)) // TODO: report error
-                      }
-                    />
-                  </React.Fragment>
+                  <FlagMenuItem
+                    determineTitle={x => <>{x.title} <AddIcon /></>}
+                    onClick={() => setModalTranslationMode({ language })}
+                    muted
+                    {...{ language }}
+                  />
                 )
             })}
           </Menu>
@@ -93,15 +77,35 @@ export function TranslationMenu({ document$, language, schemaTypeName, translati
         placement='bottom'
         popover={{portal: true}}
       />
-      {modal && (
-        <MissingTranslationsDialog
-          documents={modal.references}
-          onClose={() => setModal(null)}
-          canContinueWithoutReferences={modal.cleanDuplicate}
-          onContinue={() => {
-            translateDuplicateWithoutReferences({ original: modal.cleanDuplicate, language: modal.language })
+
+      {modalTranslationMode && (
+        <TranslationModeDialog
+          language={modalTranslationMode.language}
+          onClose={() => setModalTranslationMode(null)}
+          onDuplicate={language => {
+            translateDuplicate({ original: document$.getValue(), language })
+              .then(({ status, data }) => {
+                if (status === 'success') return
+                if (status === 'untranslatedReferencesFound')
+                  return showUntranslatedReferences(data)
+              })
               .catch(reportError)
-              .then(_ => setModal(null))
+          }}
+          onNewDocument={language => {
+            createNewDocumentAndSetActive({ language }).catch(reportError)
+          }}
+        />
+      )}
+
+      {modalMissingTranslations && (
+        <MissingTranslationsDialog
+          documents={modalMissingTranslations.references}
+          onClose={() => setModalMissingTranslations(null)}
+          canContinueWithoutReferences={modalMissingTranslations.cleanDuplicate}
+          onContinue={() => {
+            translateDuplicateWithoutReferences({ original: modalMissingTranslations.cleanDuplicate, language: modalMissingTranslations.language })
+              .catch(reportError)
+              .then(_ => setModalMissingTranslations(null))
           }}
         />
       )}
@@ -122,11 +126,11 @@ export function TranslationMenu({ document$, language, schemaTypeName, translati
 
   function showUntranslatedReferences(data) {
     const { references, cleanDuplicate, language } = data
-    setModal({ references, cleanDuplicate, language })
+    setModalMissingTranslations({ references, cleanDuplicate, language })
   }
 }
 
-function FlagMenuItem({ language, onClick, determineTitle }) {
+function FlagMenuItem({ language, onClick, determineTitle, muted }) {
   const config = pluginConfig.languages[language]
   const [languagePart, countryPart] = config ? config.icu.split('_') : []
   const Flag = Flags[countryPart]
@@ -135,9 +139,9 @@ function FlagMenuItem({ language, onClick, determineTitle }) {
     <MenuItem
       {...{ onClick }}
       text={
-        <Flex gap={2}>
+        <Flex gap={2} align='center' paddingRight={2}>
           <Flag style={{ width: '1em', margin: '0.2em 0', display: 'block' }} />
-          <Box>{determineTitle(config)}</Box>
+          <Text {...{ muted }}>{determineTitle(config)}</Text>
         </Flex>
       }
     />
@@ -177,46 +181,76 @@ function translationsAsLookup(translations) {
 }
 
 function EditLink({ document, schemaType }) {
+
   return (
     <IntentLink
-      className={styles.link}
       intent='edit'
       params={{ id: document.translationId, type: document._type }}
+      style={{ textDecoration: 'none' }}
     >
-      <Preview value={document} type={schemaType} />
+      <Button as='span' mode='ghost' paddingY={2} radius={2} shadow={1} paddingRight={4}>
+        <Preview value={document} type={schemaType} />
+      </Button>
     </IntentLink>
+  )
+}
+
+function TranslationModeDialog({ language, onClose, onDuplicate, onNewDocument }) {
+  const { title, adjective } = pluginConfig.languages[language]
+  return (
+    <Dialog 
+      width={1}
+      header='Vertaling aanmaken' 
+      footer={
+        <Grid columns={2} gap={2} paddingX={4} paddingY={3}>
+          <Button flex={1} onClick={_ => onNewDocument(language)} mode='bleed' style={{ textAlign: 'center' }}>Nieuw document</Button>
+          <Button flex={1} onClick={_ => onDuplicate(language)} tone='positive' style={{ textAlign: 'center' }}>Kopie</Button>
+        </Grid>
+      } 
+      {...{ onClose }}
+    >
+      <Box padding={4}>
+        <Text>Dit document is nog niet vertaald in het <strong>{title}</strong>. Wil je een <strong>{adjective}</strong> kopie maken op basis van dit document, of begin je liever met een schone lei?</Text>
+      </Box>
+    </Dialog>
   )
 }
 
 function MissingTranslationsDialog({ documents, onClose, canContinueWithoutReferences, onContinue }) {
   return (
     <Dialog
-      title='Niet alle gekoppelde documenten hebben een gepubliceerde vertaling'
-      cancelButtonText='Annuleren'
-      cancelColor='success'
-      onConfirm={canContinueWithoutReferences ? onContinue : null}
-      confirmButtonText={canContinueWithoutReferences ? 'Toch doorgaan' : null}
-      confirmColor={canContinueWithoutReferences ? 'danger' : null}
-      onEscape={onClose} onClickOutside={onClose} onCancel={onClose}
+      width={1}
+      header='Let op!'
+      footer={
+        <Grid columns={2} gap={2} paddingX={4} paddingY={3}>
+          <Button onClick={onClose} mode='ghost' style={{ textAlign: 'center' }}>Cancel</Button>
+          {canContinueWithoutReferences && <Button tone='critical' onClick={onContinue} style={{ textAlign: 'center' }}>Continue</Button>}
+        </Grid>
+      }
       {...{ onClose }}
     >
-      <div className={styles.componentMissingTranslationsDialog}>
-        <ul className={styles.missingTranslationsList}>
-          {documents.map(document => (
-            <li key={document._id}>
-              <EditLink {...{ document }} schemaType={schema.get(document._type)} />
-            </li>
-          ))}
-        </ul>
+      <Box padding={4}>
+        <Stack space={4}>
+          <Text>
+            Niet alle gekoppelde documenten hebben een gepubliceerde vertaling:
+          </Text>
+          <ul style={{ listStyleType: 'none', margin: 0, padding: 0 }}>
+            {documents.map(document => (
+              <li key={document._id}>
+                <EditLink {...{ document }} schemaType={schema.get(document._type)} />
+              </li>
+            ))}
+          </ul>
 
-        {canContinueWithoutReferences && (
-          <p>De missende documentvertalingen zijn niet verplicht. Kies voor <strong>toch doorgaan</strong> om een vertaling van dit document aan te maken zonder deze gekoppelde documenten.</p>
-        )}
+          {canContinueWithoutReferences && (
+            <Text>De missende documentvertalingen zijn niet verplicht. Kies voor <strong>toch doorgaan</strong> om een vertaling van dit document aan te maken zonder deze gekoppelde documenten.</Text>
+          )}
 
-        <footer className={styles.footer}>
-          Als je te maken hebt met te veel (of circulaire) koppelingen kun je er ook voor kiezen om een nieuw document aan te maken.
-        </footer>
-      </div>
+          <Text size={1} muted>
+            Als je te maken hebt met te veel (of circulaire) koppelingen kun je er ook voor kiezen om een nieuw document aan te maken.
+          </Text>
+        </Stack>
+      </Box>
     </Dialog>
   )
 }
