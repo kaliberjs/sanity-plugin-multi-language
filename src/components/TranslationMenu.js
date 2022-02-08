@@ -1,5 +1,3 @@
-// TODO: @Peeke, hier meer sanity ui gebruiken?
-
 import React from 'react'
 import * as uuid from 'uuid'
 import groq from 'groq'
