@@ -37,7 +37,7 @@ export function TranslationMenu({ document$, language, schemaTypeName, translati
   if (!config) return null
 
   return (
-    <>
+    <div onClick={e => { e.stopPropagation() }}>
       <MenuButton
         id="language-switch"
         button={
@@ -109,7 +109,7 @@ export function TranslationMenu({ document$, language, schemaTypeName, translati
           }}
         />
       )}
-    </>
+    </div>
   )
 
   async function createNewDocumentAndSetActive({ language }) {
