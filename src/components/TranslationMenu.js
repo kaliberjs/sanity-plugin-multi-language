@@ -201,6 +201,11 @@ function TranslationModeDialog({ language, onClose, onDuplicate, onNewDocument }
     <Dialog 
       width={1}
       header='Vertaling aanmaken' 
+      children={
+        <Box padding={4}>
+          <Text>Dit document is nog niet vertaald in het <strong>{title}</strong>. Wil je een <strong>{adjective}</strong> kopie maken op basis van dit document, of begin je liever met een schone lei?</Text>
+        </Box>
+      }
       footer={
         <Grid columns={2} gap={2} paddingX={4} paddingY={3}>
           <Button flex={1} onClick={_ => onNewDocument(language)} mode='bleed' style={{ textAlign: 'center' }}>Nieuw document</Button>
@@ -208,11 +213,7 @@ function TranslationModeDialog({ language, onClose, onDuplicate, onNewDocument }
         </Grid>
       } 
       {...{ onClose }}
-    >
-      <Box padding={4}>
-        <Text>Dit document is nog niet vertaald in het <strong>{title}</strong>. Wil je een <strong>{adjective}</strong> kopie maken op basis van dit document, of begin je liever met een schone lei?</Text>
-      </Box>
-    </Dialog>
+    />
   )
 }
 
