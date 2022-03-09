@@ -3,13 +3,13 @@
 import React from 'react'
 import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from 'react-query'
 import * as uuid from 'uuid'
-import { FaCopy, FaPen } from 'react-icons/fa'
 import groq from 'groq'
 import { validateDocument } from '@sanity/validation'
 import sanityClient from 'part:@sanity/base/client'
 import schema from 'part:@sanity/base/schema'
 import Dialog from 'part:@sanity/components/dialogs/confirm'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
+import { DocumentsIcon, ComposeIcon } from '@sanity/icons'
 // Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
 // import { reportError } from '../../../machinery/reportError'
 import styles from './Translations.css'
@@ -196,19 +196,15 @@ function EditLink({ document }) {
 }
 
 function TranslateActions({ onClickDuplicate, onClickFresh, language }) {
-  const [, Flag] = pluginConfig.languages[language].icu.split('_')
+  const [, flag] = pluginConfig.languages[language].icu.split('_')
   const Flag = Flags[flag]
 
   return (
-    <Card shadow={1} padding={1} radius={2}>
-      <Flex gap={2} align='center'>
-        <Flag style={{ height: '1em', borderRadius: '2px' }} />
-        <Button onClick={onClickDuplicate} icon={FaCopy} tone='primary' mode='ghost'>
-          {pluginConfig.languages[language].adjective} kopie maken
-        </Button>
-        <Button onClick={onClickFresh} icon={FaPen} tone='primary'>
-          Nieuw blanco document aanmaken
-        </Button>
+    <Card shadow={1} paddingY={2} paddingLeft={3} paddingRight={2} radius={2}>
+      <Flex gap={3} align='center'> 
+        <Flag style={{ width: '1.5em', height: '1em', borderRadius: '2px', flexShrink: '0' }} />
+        <Button onClick={onClickFresh} icon={ComposeIcon} tone='primary' mode='ghost' text='Blanco vertaling aanmaken' style={{ width: '100%'}} />
+        <Button onClick={onClickDuplicate} icon={DocumentsIcon} tone='primary' text={`${pluginConfig.languages[language].adjective} kopie maken`} style={{ width: '100%'}} />
       </Flex>
     </Card>
   )
@@ -251,8 +247,8 @@ function Preview({ document, readOnly = false }) {
   const editState = useEditState(document._id.replace(/^drafts\./, ''), document._type)
   const { published, draft } = editState ?? {}
   const schemaType = React.useMemo(() => schema.get(document._type), [document._type])
-  const [, language] = pluginConfig.languages[document.language].icu.split('_')
-  const Flag = Flags[language]
+  const [, flag] = pluginConfig.languages[document.language].icu.split('_')
+  const Flag = Flags[flag]
 
   return (
     <Card shadow={readOnly ? 0 : 1} tone={readOnly ? 'transparent' : 'default'} padding={2} radius={2}>
