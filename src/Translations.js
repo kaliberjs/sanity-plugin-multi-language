@@ -1,25 +1,24 @@
 // TODO: @Peeke, hier meer sanity ui gebruiken?
 
 import React from 'react'
+import Flags from 'country-flag-icons/react/3x2'
 import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from 'react-query'
 import * as uuid from 'uuid'
 import groq from 'groq'
-import { validateDocument } from '@sanity/validation'
 import sanityClient from 'part:@sanity/base/client'
 import schema from 'part:@sanity/base/schema'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
-import { DocumentsIcon, ComposeIcon } from '@sanity/icons'
-// Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
-// import { reportError } from '../../../machinery/reportError'
-import styles from './Translations.css'
-
 import { usePaneRouter } from '@sanity/desk-tool'
 import { PublishedStatus } from '@sanity/desk-tool/lib/components/PublishedStatus'
 import { DraftStatus } from '@sanity/desk-tool/lib/components/DraftStatus'
 import { useEditState } from '@sanity/react-hooks'
 import { Container, Stack, Flex, Box, Inline, Card, Dialog, Grid, Text, Spinner, Button } from '@sanity/ui'
 import { SanityPreview } from '@sanity/base/preview'
-import Flags from 'country-flag-icons/react/3x2'
+import { DocumentsIcon, ComposeIcon } from '@sanity/icons'
+
+// Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
+// import { reportError } from '../../../machinery/reportError'
+import styles from './Translations.css'
 
 function reportError(e) {
   console.error(e)
@@ -44,7 +43,7 @@ export function typeHasLanguage(type) {
 function Translations({ document: { displayed: document, draft, published } }) {
   const [modal, setModal] = React.useState(null)
   const schemaType = schema.get(document._type)
-
+console.log({modal})
   const queryClient = useQueryClient()
   const { data, isLoading, isSuccess, isError } = useQuery({
     queryKey: ['translations', { document }],
@@ -143,39 +142,42 @@ function Translations({ document: { displayed: document, draft, published } }) {
   }
 }
 
-function Languages({ original, translations, schemaType, onTranslateFresh, onTranslateDuplicate }) {
+function Languages({ original, translations, onTranslateFresh, onTranslateDuplicate }) {
   return (
     <ul className={styles.languages}>
-      {Object.keys(pluginConfig.languages).map(language => {
-        const document = translations[language]
-        const isCurrentDocument = document?._id === original._id
-        return (
-          <Language
-            key={language}
-            title={pluginConfig.languages[language].title}
-            {...{ isCurrentDocument }}
-          >
-            {
-              isCurrentDocument ? <PreviewWithFlag muted {...{ document }} /> :
-              document ? <EditLink {...{ document }}><PreviewWithFlag {...{ document }} /></EditLink> :
-              <TranslateActions
-                {...{ language } }
-                onClickDuplicate={() => onTranslateDuplicate(language)}
-                onClickFresh={() => onTranslateFresh(language)}
-              />
-            }
-          </Language>
-        )
-      })}
+      {Object.keys(pluginConfig.languages)
+        .filter(x => x !== original.language)
+        .map(language => {
+          const document = translations[language]
+          return (
+            <Language
+              key={language}
+              title={pluginConfig.languages[language].title}
+            >
+              {document ? (
+                <EditLink {...{ document }}>
+                  <PreviewWithFlag {...{ document }} />
+                </EditLink> 
+              ) : (
+                <TranslateActions
+                  {...{ language } }
+                  onClickDuplicate={() => onTranslateDuplicate(language)}
+                  onClickFresh={() => onTranslateFresh(language)}
+                />
+              )}
+            </Language>
+          )
+        })
+      }
     </ul>
   )
 }
 
-function Language({ title, isCurrentDocument, children }) {
+function Language({ title, children }) {
   return (
     <li className={styles.componentLanguage}>
       <div className={styles.languageTitle}>
-        <Text size={1}>{title}{isCurrentDocument && ' (huidig document)'}</Text>
+        <Text size={1}>{title}</Text>
       </div>
 
       {children}
@@ -184,8 +186,7 @@ function Language({ title, isCurrentDocument, children }) {
 }
 
 function EditLink({ document, children }) {
-  const { ChildLink, routerPanesState, index, ...rest } = usePaneRouter()
-  console.log({ rest })
+  const { ChildLink, routerPanesState, index } = usePaneRouter()
 
   return (
     <ChildLink key={document._id} childId={document._id} childParameters={{ type: document._type }} style={{ color: 'inherit', textDecoration: 'none' }}>
@@ -357,13 +358,12 @@ async function addDuplicatedTranslation({ original, language }) {
 
   async function untranslatedReferencesFound(untranslatedReferences) {
     const duplicate = removeExcludedReferences(original, untranslatedReferences.map(x => x._id))
-    const valid = (await validateDocument(duplicate, schema)).every(x => x.level !== 'error')
 
     return {
       status: 'untranslatedReferencesFound',
       data: {
         references: untranslatedReferences,
-        cleanDuplicate: valid ? duplicate : null,
+        cleanDuplicate: duplicate,
         language
       }
     }
@@ -472,7 +472,7 @@ function mapValues(o, f) {
 
 function removeExcludedReferences(data, exclude) {
   if (!data || typeof data !== 'object') return data
-  if (isReference(data) && exclude.includes(data._ref)) return null
+  if (isReference(data) && exclude.includes(data._ref)) return undefined
 
   return Array.isArray(data)
     ? data.map(x => removeExcludedReferences(x, exclude)).filter(Boolean)
