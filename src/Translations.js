@@ -254,7 +254,7 @@ function Preview({ document, muted = undefined }) {
 }
 
 function PreviewWithFlag({ document, muted = undefined }) {
-  return <PreviewBase flag={<Flag language={document.language} style={{ width: '1.5em' }} />} {...{ document, muted }} />
+  return <PreviewBase flag={<DocumentFlag language={document.language} style={{ width: '1.5em' }} />} {...{ document, muted }} />
 }
 
 function PreviewBase({ document, flag = undefined, muted }) {
@@ -285,7 +285,7 @@ function PreviewBase({ document, flag = undefined, muted }) {
   )
 }
 
-function Flag({ language: languageCode }) {
+function DocumentFlag({ language: languageCode, style = undefined }) {
   const language = pluginConfig.languages[languageCode]
   if (!language) return null
   
