@@ -8,8 +8,8 @@ import groq from 'groq'
 import { validateDocument } from '@sanity/validation'
 import Button from 'part:@sanity/components/buttons/default'
 import sanityClient from 'part:@sanity/base/client'
-import Preview from 'part:@sanity/base/preview'
-import { IntentLink } from 'part:@sanity/base/router'
+// import Preview from 'part:@sanity/base/preview'
+// import { IntentLink } from 'part:@sanity/base/router'
 import schema from 'part:@sanity/base/schema'
 import Dialog from 'part:@sanity/components/dialogs/confirm'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
@@ -17,6 +17,14 @@ import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
 // import { reportError } from '../../../machinery/reportError'
 import styles from './Translations.css'
 
+import { usePaneRouter } from '@sanity/desk-tool'
+import { PublishedStatus } from '@sanity/desk-tool/lib/components/PublishedStatus'
+import { DraftStatus } from '@sanity/desk-tool/lib/components/DraftStatus'
+import { useEditState } from '@sanity/react-hooks'
+import { Flex, Box, Inline, Card, Container } from '@sanity/ui'
+import { SanityPreview } from '@sanity/base/preview'
+import Flags from 'country-flag-icons/react/3x2'
+console.log({ SanityPreview })
 function reportError(e) {
   console.error(e)
   // TODO: report to rollbar
@@ -74,7 +82,13 @@ function Translations({ document: { displayed: document, draft, published } }) {
   })
 
   return (
-    <article className={styles.component}>
+    <Container
+      paddingBottom={9}
+      paddingTop={5}
+      paddingX={4}
+      sizing='border'
+      width={1}
+    >
       <h3>Vertalingen</h3>
       {isLoading && <p>Laden...</p>}
       {isError && <p>Er ging iets mis...</p>}
@@ -104,7 +118,7 @@ function Translations({ document: { displayed: document, draft, published } }) {
           }}
         />
       )}
-    </article>
+    </Container>
   )
 
   function showUntranslatedReferences(data) {
@@ -130,13 +144,14 @@ function Languages({ original, translations, schemaType, onTranslateFresh, onTra
             title={pluginConfig.languages[language].title}
             {...{ isCurrentDocument }}
           >
-            {document
-              ? <EditLink {...{ document, schemaType }} />
-              : <TranslateActions
-                  {...{ language } }
-                  onClickDuplicate={() => onTranslateDuplicate(language)}
-                  onClickFresh={() => onTranslateFresh(language)}
-                />
+            {
+              document && language === original.language ? <Preview {...{ document }} readOnly /> :
+              document ? <EditLink {...{ document, schemaType }} /> :
+              <TranslateActions
+                {...{ language } }
+                onClickDuplicate={() => onTranslateDuplicate(language)}
+                onClickFresh={() => onTranslateFresh(language)}
+              />
             }
           </Language>
         )
@@ -158,14 +173,12 @@ function Language({ title, isCurrentDocument, children }) {
 }
 
 function EditLink({ document, schemaType }) {
+  const { ChildLink, routerPanesState, index, ...rest } = usePaneRouter()
+
   return (
-    <IntentLink
-      className={styles.link}
-      intent="edit"
-      params={{ id: document._id, type: document._type }}
-    >
-      <Preview value={document} type={schemaType} />
-    </IntentLink>
+    <ChildLink key={document._id} childId={document._id} childParameters={{ type: document._type }} style={{ color: 'inherit', textDecoration: 'none' }}>
+      <Preview {...{ document }} />
+    </ChildLink>
   )
 }
 
@@ -212,6 +225,31 @@ function MissingTranslationsDialog({ documents, onClose, canContinueWithoutRefer
         </footer>
       </div>
     </Dialog>
+  )
+}
+
+function Preview({ document, readOnly = false }) {
+  const editState = useEditState(document._id.replace(/^drafts\./, ''), document._type)
+  const { published, draft } = editState ?? {}
+  const schemaType = React.useMemo(() => schema.get(document._type), [document._type])
+  const [, language] = pluginConfig.languages[document.language].icu.split('_')
+  const Flag = Flags[language]
+
+  return (
+    <Card shadow={readOnly ? 0 : 1} tone={readOnly ? 'transparent' : 'default'} padding={2} radius={2}>
+      <Flex gap={2} paddingX={2} align='center'>
+        <Flag style={{ height: '1em', borderRadius: '2px' }} />
+        <Box flex={1}>
+          <SanityPreview type={schemaType} value={document} layout='default' />
+        </Box>
+        <Box>
+          <Inline space={4}>
+            <PublishedStatus document={published} />
+            <DraftStatus document={draft} />
+          </Inline>
+        </Box>
+      </Flex>
+    </Card>
   )
 }
 
