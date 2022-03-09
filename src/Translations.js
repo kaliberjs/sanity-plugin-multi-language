@@ -6,10 +6,7 @@ import * as uuid from 'uuid'
 import { FaCopy, FaPen } from 'react-icons/fa'
 import groq from 'groq'
 import { validateDocument } from '@sanity/validation'
-import Button from 'part:@sanity/components/buttons/default'
 import sanityClient from 'part:@sanity/base/client'
-// import Preview from 'part:@sanity/base/preview'
-// import { IntentLink } from 'part:@sanity/base/router'
 import schema from 'part:@sanity/base/schema'
 import Dialog from 'part:@sanity/components/dialogs/confirm'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
@@ -21,10 +18,10 @@ import { usePaneRouter } from '@sanity/desk-tool'
 import { PublishedStatus } from '@sanity/desk-tool/lib/components/PublishedStatus'
 import { DraftStatus } from '@sanity/desk-tool/lib/components/DraftStatus'
 import { useEditState } from '@sanity/react-hooks'
-import { Flex, Box, Inline, Card, Container } from '@sanity/ui'
+import { Container, Stack, Flex, Box, Inline, Card, Heading, Text, Spinner, Button } from '@sanity/ui'
 import { SanityPreview } from '@sanity/base/preview'
 import Flags from 'country-flag-icons/react/3x2'
-console.log({ SanityPreview })
+
 function reportError(e) {
   console.error(e)
   // TODO: report to rollbar
@@ -89,24 +86,40 @@ function Translations({ document: { displayed: document, draft, published } }) {
       sizing='border'
       width={1}
     >
-      <h3>Vertalingen</h3>
-      {isLoading && <p>Laden...</p>}
-      {isError && <p>Er ging iets mis...</p>}
+      <Stack space={2}>
+        <Text weight='semibold'>Vertalingen</Text>
+        
+        {isLoading && (
+          <Flex justify="center">
+            <Spinner muted />
+          </Flex>
+        )}
+        
+        {isError && (
+          <Card padding={[3, 3, 4]}
+            radius={2}
+            shadow={1}
+            tone='critical'
+          >
+            <Text>Er ging iets mis...</Text>
+          </Card>
+        )}
 
-      {isSuccess && (
-        (published || draft)
-          ? <Languages
-              original={document}
-              {...{ translations, schemaType }}
-              onTranslateFresh={language => {
-                addFreshTranslation({ original: document, language })
-              }}
-              onTranslateDuplicate={language => {
-                addDuplicateTranslation({ original: document, language })
-              }}
-            />
-          : <p>Het lijkt erop dat er nog niets is om te vertalen!</p>
-      )}
+        {isSuccess && (
+          (published || draft)
+            ? <Languages
+                original={document}
+                {...{ translations, schemaType }}
+                onTranslateFresh={language => {
+                  addFreshTranslation({ original: document, language })
+                }}
+                onTranslateDuplicate={language => {
+                  addDuplicateTranslation({ original: document, language })
+                }}
+              />
+            : <Text>Het lijkt erop dat er nog niets is om te vertalen!</Text>
+        )}
+      </Stack>
 
       {modal && (
         <MissingTranslationsDialog
@@ -145,8 +158,8 @@ function Languages({ original, translations, schemaType, onTranslateFresh, onTra
             {...{ isCurrentDocument }}
           >
             {
-              document && language === original.language ? <Preview {...{ document }} readOnly /> :
-              document ? <EditLink {...{ document, schemaType }} /> :
+              isCurrentDocument ? <Preview {...{ document }} readOnly /> :
+              document ? <EditLink {...{ document }} /> :
               <TranslateActions
                 {...{ language } }
                 onClickDuplicate={() => onTranslateDuplicate(language)}
@@ -172,7 +185,7 @@ function Language({ title, isCurrentDocument, children }) {
   )
 }
 
-function EditLink({ document, schemaType }) {
+function EditLink({ document }) {
   const { ChildLink, routerPanesState, index, ...rest } = usePaneRouter()
 
   return (
@@ -183,15 +196,21 @@ function EditLink({ document, schemaType }) {
 }
 
 function TranslateActions({ onClickDuplicate, onClickFresh, language }) {
+  const [, Flag] = pluginConfig.languages[language].icu.split('_')
+  const Flag = Flags[flag]
+
   return (
-    <div className={styles.languageActions}>
-      <Button onClick={onClickDuplicate} icon={FaCopy}>
-        {pluginConfig.languages[language].adjective} kopie maken
-      </Button>
-      <Button onClick={onClickFresh} icon={FaPen}>
-        Nieuw document aanmaken
-      </Button>
-    </div>
+    <Card shadow={1} padding={1} radius={2}>
+      <Flex gap={2} align='center'>
+        <Flag style={{ height: '1em', borderRadius: '2px' }} />
+        <Button onClick={onClickDuplicate} icon={FaCopy} tone='primary' mode='ghost'>
+          {pluginConfig.languages[language].adjective} kopie maken
+        </Button>
+        <Button onClick={onClickFresh} icon={FaPen} tone='primary'>
+          Nieuw blanco document aanmaken
+        </Button>
+      </Flex>
+    </Card>
   )
 }
 
@@ -211,7 +230,7 @@ function MissingTranslationsDialog({ documents, onClose, canContinueWithoutRefer
         <ul className={styles.missingTranslationsList}>
           {documents.map(document => (
             <li key={document._id}>
-              <EditLink {...{ document }} schemaType={schema.get(document._type)} />
+              <EditLink {...{ document }} />
             </li>
           ))}
         </ul>
