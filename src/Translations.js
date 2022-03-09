@@ -7,7 +7,6 @@ import groq from 'groq'
 import { validateDocument } from '@sanity/validation'
 import sanityClient from 'part:@sanity/base/client'
 import schema from 'part:@sanity/base/schema'
-import Dialog from 'part:@sanity/components/dialogs/confirm'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
 import { DocumentsIcon, ComposeIcon } from '@sanity/icons'
 // Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
@@ -18,7 +17,7 @@ import { usePaneRouter } from '@sanity/desk-tool'
 import { PublishedStatus } from '@sanity/desk-tool/lib/components/PublishedStatus'
 import { DraftStatus } from '@sanity/desk-tool/lib/components/DraftStatus'
 import { useEditState } from '@sanity/react-hooks'
-import { Container, Stack, Flex, Box, Inline, Card, Heading, Text, Spinner, Button } from '@sanity/ui'
+import { Container, Stack, Flex, Box, Inline, Card, Dialog, Grid, Text, Spinner, Button } from '@sanity/ui'
 import { SanityPreview } from '@sanity/base/preview'
 import Flags from 'country-flag-icons/react/3x2'
 
@@ -125,7 +124,6 @@ function Translations({ document: { displayed: document, draft, published } }) {
         <MissingTranslationsDialog
           documents={modal.references}
           onClose={() => setModal(null)}
-          canContinueWithoutReferences={modal.cleanDuplicate}
           onContinue={() => {
             addDuplicateTranslationsWithoutReferences({ original: modal.cleanDuplicate, language: modal.language })
           }}
@@ -158,8 +156,8 @@ function Languages({ original, translations, schemaType, onTranslateFresh, onTra
             {...{ isCurrentDocument }}
           >
             {
-              isCurrentDocument ? <Preview {...{ document }} readOnly /> :
-              document ? <EditLink {...{ document }} /> :
+              isCurrentDocument ? <PreviewWithFlag muted {...{ document }} /> :
+              document ? <EditLink {...{ document }}><PreviewWithFlag {...{ document }} /></EditLink> :
               <TranslateActions
                 {...{ language } }
                 onClickDuplicate={() => onTranslateDuplicate(language)}
@@ -177,7 +175,7 @@ function Language({ title, isCurrentDocument, children }) {
   return (
     <li className={styles.componentLanguage}>
       <div className={styles.languageTitle}>
-        {title}{isCurrentDocument && ' (huidig document)'}
+        <Text size={1}>{title}{isCurrentDocument && ' (huidig document)'}</Text>
       </div>
 
       {children}
@@ -185,19 +183,23 @@ function Language({ title, isCurrentDocument, children }) {
   )
 }
 
-function EditLink({ document }) {
+function EditLink({ document, children }) {
   const { ChildLink, routerPanesState, index, ...rest } = usePaneRouter()
+  console.log({ rest })
 
   return (
     <ChildLink key={document._id} childId={document._id} childParameters={{ type: document._type }} style={{ color: 'inherit', textDecoration: 'none' }}>
-      <Preview {...{ document }} />
+      {children}
     </ChildLink>
   )
 }
 
 function TranslateActions({ onClickDuplicate, onClickFresh, language }) {
-  const [, flag] = pluginConfig.languages[language].icu.split('_')
-  const Flag = Flags[flag]
+  const icu = pluginConfig.languages[language]?.icu
+  if (!icu) return null
+
+  const [, country] = icu.split('_')
+  const Flag = Flags[country]
 
   return (
     <Card shadow={1} paddingY={2} paddingLeft={3} paddingRight={2} radius={2}>
@@ -210,50 +212,65 @@ function TranslateActions({ onClickDuplicate, onClickFresh, language }) {
   )
 }
 
-function MissingTranslationsDialog({ documents, onClose, canContinueWithoutReferences, onContinue }) {
+function MissingTranslationsDialog({ documents, onClose, onContinue }) {
   return (
     <Dialog
-      title='Niet alle gekoppelde documenten hebben een gepubliceerde vertaling'
-      cancelButtonText='Annuleren'
-      cancelColor='success'
-      onConfirm={canContinueWithoutReferences ? onContinue : null}
-      confirmButtonText={canContinueWithoutReferences ? 'Toch doorgaan' : null}
-      confirmColor={canContinueWithoutReferences ? 'danger' : null}
-      onEscape={onClose} onClickOutside={onClose} onCancel={onClose}
+      width={1}
+      header='Let op!'
+      footer={
+        <Grid columns={2} gap={2} paddingX={4} paddingY={3}>
+          <Button onClick={onClose} mode='ghost' style={{ textAlign: 'center' }}>Cancel</Button>
+          <Button tone='critical' onClick={onContinue} style={{ textAlign: 'center' }}>Continue</Button>
+        </Grid>
+      }
       {...{ onClose }}
     >
-      <div className={styles.componentMissingTranslationsDialog}>
-        <ul className={styles.missingTranslationsList}>
-          {documents.map(document => (
-            <li key={document._id}>
-              <EditLink {...{ document }} />
-            </li>
-          ))}
-        </ul>
+      <Box padding={4}>
+        <Stack space={4}>
+          <Text>
+            Niet alle gekoppelde documenten hebben een gepubliceerde vertaling:
+          </Text>
+          <ul style={{ listStyleType: 'none', margin: 0, padding: 0 }}>
+            {documents.map(document => (
+              <li key={document._id}>
+                <EditLink {...{ document }}>
+                  <Preview {...{ document }} />
+                </EditLink>
+              </li>
+            ))}
+          </ul>
 
-        {canContinueWithoutReferences && (
-          <p>De missende documentvertalingen zijn niet verplicht. Kies voor <strong>toch doorgaan</strong> om een vertaling van dit document aan te maken zonder deze gekoppelde documenten.</p>
-        )}
-
-        <footer className={styles.footer}>
-          Als je te maken hebt met te veel (of circulaire) koppelingen kun je er ook voor kiezen om een nieuw document aan te maken.
-        </footer>
-      </div>
+          <Text size={1} muted>
+            Als je te maken hebt met te veel (of circulaire) koppelingen kun je er ook voor kiezen om een nieuw document aan te maken.
+          </Text>
+        </Stack>
+      </Box>
     </Dialog>
   )
 }
 
-function Preview({ document, readOnly = false }) {
+function Preview({ document, muted = undefined }) {
+  return <PreviewBase {...{ document, muted }} />
+}
+
+function PreviewWithFlag({ document, muted = undefined }) {
+  return <PreviewBase flag={<Flag language={document.language} style={{ width: '1.5em' }} />} {...{ document, muted }} />
+}
+
+function PreviewBase({ document, flag = undefined, muted }) {
+  const schemaType = React.useMemo(() => schema.get(document._type), [document._type])
   const editState = useEditState(document._id.replace(/^drafts\./, ''), document._type)
   const { published, draft } = editState ?? {}
-  const schemaType = React.useMemo(() => schema.get(document._type), [document._type])
-  const [, flag] = pluginConfig.languages[document.language].icu.split('_')
-  const Flag = Flags[flag]
 
   return (
-    <Card shadow={readOnly ? 0 : 1} tone={readOnly ? 'transparent' : 'default'} padding={2} radius={2}>
+    <Card
+      shadow={muted ? 0 : 1} 
+      tone={muted ? 'transparent' : 'default'} 
+      padding={2} 
+      radius={2}
+    >
       <Flex gap={2} paddingX={2} align='center'>
-        <Flag style={{ height: '1em', borderRadius: '2px' }} />
+        {flag}
         <Box flex={1}>
           <SanityPreview type={schemaType} value={document} layout='default' />
         </Box>
@@ -266,6 +283,16 @@ function Preview({ document, readOnly = false }) {
       </Flex>
     </Card>
   )
+}
+
+function Flag({ language: languageCode }) {
+  const language = pluginConfig.languages[languageCode]
+  if (!language) return null
+  
+  const [, country] = language.icu.split('_')
+  const Flag = Flags[country]
+
+  return <Flag {...{ style }} />
 }
 
 async function getTranslations(context) {
@@ -346,7 +373,7 @@ async function addDuplicatedTranslation({ original, language }) {
 async function createDuplicateTranslation({ original, language }) {
   const { _id, _createdAt, _rev, _updatedAt, ...document } = original
   const { translationId } = document
-console.log(document)
+
   const [, duplicate] = await Promise.all([
     sanityClient.patch(_id).setIfMissing({ translationId }).commit(), // TODO: kan dit echt gebeuren?
     sanityClient.create({
