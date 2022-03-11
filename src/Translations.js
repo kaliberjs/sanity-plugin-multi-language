@@ -43,7 +43,6 @@ export function typeHasLanguage(type) {
 function Translations({ document: { displayed: document, draft, published } }) {
   const [modal, setModal] = React.useState(null)
   const schemaType = schema.get(document._type)
-console.log({modal})
   const queryClient = useQueryClient()
   const { data, isLoading, isSuccess, isError } = useQuery({
     queryKey: ['translations', { document }],
