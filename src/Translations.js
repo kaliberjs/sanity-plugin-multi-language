@@ -472,7 +472,7 @@ function mapValues(o, f) {
 
 function removeExcludedReferences(data, exclude) {
   if (!data || typeof data !== 'object') return data
-  if (isReference(data) && exclude.includes(data._ref)) return undefined
+  if (isReference(data) && exclude.includes(data._ref)) return
 
   return Array.isArray(data)
     ? data.map(x => removeExcludedReferences(x, exclude)).filter(Boolean)
