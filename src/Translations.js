@@ -12,6 +12,7 @@ import { DraftStatus } from '@sanity/desk-tool/lib/components/DraftStatus'
 import { useEditState } from '@sanity/react-hooks'
 import { Container, Stack, Flex, Box, Inline, Card, Dialog, Grid, Text, Spinner, Button } from '@sanity/ui'
 import { SanityPreview } from '@sanity/base/preview'
+import { useRouter } from '@sanity/base/router'
 import { DocumentsIcon, ComposeIcon } from '@sanity/icons'
 
 // Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
@@ -45,31 +46,33 @@ function Translations({ document: { displayed: document, draft, published } }) {
   const { data, isLoading, isSuccess, isError } = useQuery({
     queryKey: ['translations', { document }],
     queryFn: getTranslations,
-    onError: onQueryError
+    onError: handleQueryError
   })
   const translations = data ?? []
+  const paneRouter = usePaneRouter()
+  const router = useRouter()
 
   // TODO: Show toast on error
 
   const { mutate: addFreshTranslation } = useMutation({
     mutationFn: translateFresh,
-    onSuccess() { queryClient.invalidateQueries(['translations']) },
-    onError: onQueryError
+    onSuccess: handleTranslationCreated,
+    onError: handleQueryError
   })
 
   const { mutate: addDuplicateTranslation } = useMutation({
     mutationFn: translateDuplicate,
     onSuccess({ status, data }) {
-      if (status === 'success') queryClient.invalidateQueries(['translations'])
+      if (status === 'success') handleTranslationCreated({ data })
       else if (status === 'untranslatedReferencesFound') showUntranslatedReferences(data)
     },
-    onError: onQueryError
+    onError: handleQueryError
   })
 
   const { mutate: addDuplicateTranslationsWithoutReferences } = useMutation({
     mutationFn: translateDuplicateWithoutReferences,
-    onSuccess() { queryClient.invalidateQueries(['translations']) },
-    onError: onQueryError,
+    onSuccess: handleTranslationCreated,
+    onError: handleQueryError,
     onSettled() { setModal(null) },
   })
 
@@ -128,12 +131,23 @@ function Translations({ document: { displayed: document, draft, published } }) {
     </Container>
   )
 
+  function handleTranslationCreated({ data }) {
+    queryClient.invalidateQueries(['translations'])
+    
+    router.navigate({
+      panes: [
+        ...paneRouter.routerPanesState,
+        [{ id: data._id, params: { type: data._type } }],
+      ]
+    })
+  }
+
   function showUntranslatedReferences(data) {
     const { references, cleanDuplicate, language } = data
     setModal({ references, cleanDuplicate, language })
   }
 
-  function onQueryError(e) {
+  function handleQueryError(e) {
     reportError(e)
     alert('Something went wrong, please try again')
   }
