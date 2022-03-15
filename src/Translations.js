@@ -195,16 +195,14 @@ function EditLink({ document, children }) {
 }
 
 function TranslateActions({ onClickDuplicate, onClickFresh, language }) {
-  const icu = pluginConfig.languages[language]?.icu
-  if (!icu) return null
-
-  const [, country] = icu.split('_')
-  const Flag = Flags[country]
-
+  const icu = pluginConfig.languages[language].icu
+  
   return (
     <Card shadow={1} paddingY={2} paddingLeft={3} paddingRight={2} radius={2}>
       <Flex gap={3} align='center'> 
-        <Flag style={{ width: '1.5em', height: '1em', borderRadius: '2px', flexShrink: '0' }} />
+        <Box flex='0 0 auto'>
+          <Flag country={getCountryFromIcu(icu)} />
+        </Box>
         <Button onClick={onClickFresh} icon={ComposeIcon} tone='primary' mode='ghost' text='Blanco vertaling aanmaken' style={{ width: '100%'}} />
         <Button onClick={onClickDuplicate} icon={DocumentsIcon} tone='primary' text={`${pluginConfig.languages[language].adjective} kopie maken`} style={{ width: '100%'}} />
       </Flex>
@@ -254,7 +252,8 @@ function Preview({ document, muted = undefined }) {
 }
 
 function PreviewWithFlag({ document, muted = undefined }) {
-  return <PreviewBase flag={<DocumentFlag language={document.language} style={{ width: '1.5em' }} />} {...{ document, muted }} />
+  const icu = pluginConfig.languages[document.language].icu
+  return <PreviewBase flag={<Flag country={getCountryFromIcu(icu)} />} {...{ document, muted }} />
 }
 
 function PreviewBase({ document, flag = undefined, muted }) {
@@ -285,14 +284,9 @@ function PreviewBase({ document, flag = undefined, muted }) {
   )
 }
 
-function DocumentFlag({ language: languageCode, style = undefined }) {
-  const language = pluginConfig.languages[languageCode]
-  if (!language) return null
-  
-  const [, country] = language.icu.split('_')
+function Flag({ country }) {
   const Flag = Flags[country]
-
-  return <Flag {...{ style }} />
+  return <Flag className={styles.componentFlag} />
 }
 
 async function getTranslations(context) {
@@ -476,4 +470,9 @@ function removeExcludedReferences(data, exclude) {
   return Array.isArray(data)
     ? data.map(x => removeExcludedReferences(x, exclude)).filter(Boolean)
     : mapValues(data, x => removeExcludedReferences(x, exclude))
+}
+
+function getCountryFromIcu(icu) {
+  const [, country] = icu.split('_')
+  return country
 }
