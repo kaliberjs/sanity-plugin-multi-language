@@ -1,5 +1,3 @@
-// TODO: @Peeke, hier meer sanity ui gebruiken?
-
 import React from 'react'
 import Flags from 'country-flag-icons/react/3x2'
 import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from 'react-query'
