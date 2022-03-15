@@ -196,7 +196,7 @@ function EditLink({ document, children }) {
 
 function TranslateActions({ onClickDuplicate, onClickFresh, language }) {
   const icu = pluginConfig.languages[language].icu
-  
+
   return (
     <Card shadow={1} paddingY={2} paddingLeft={3} paddingRight={2} radius={2}>
       <Flex gap={3} align='center'> 
@@ -238,6 +238,7 @@ function MissingTranslationsDialog({ documents, onClose, onContinue }) {
             ))}
           </ul>
 
+          <Text>De missende documentvertalingen zijn niet verplicht. Kies voor <strong>continue</strong> om een vertaling van dit document aan te maken zonder deze gekoppelde documenten.</Text>
           <Text size={1} muted>
             Als je te maken hebt met te veel (of circulaire) koppelingen kun je er ook voor kiezen om een nieuw document aan te maken.
           </Text>
