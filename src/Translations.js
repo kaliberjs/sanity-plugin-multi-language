@@ -82,7 +82,7 @@ function Translations({ document: { displayed: document, draft, published } }) {
       width={1}
     >
       <Stack space={2}>
-        <Text weight='semibold'>Vertalingen</Text>
+        <Text weight='semibold'>Translations</Text>
         
         {isLoading && (
           <Flex justify="center">
@@ -96,7 +96,7 @@ function Translations({ document: { displayed: document, draft, published } }) {
             shadow={1}
             tone='critical'
           >
-            <Text>Er ging iets mis...</Text>
+            <Text>Something went wrong...</Text>
           </Card>
         )}
 
@@ -112,7 +112,7 @@ function Translations({ document: { displayed: document, draft, published } }) {
                   addDuplicateTranslation({ original: document, language })
                 }}
               />
-            : <Text>Het lijkt erop dat er nog niets is om te vertalen!</Text>
+            : <Text>It seems there isn't anything to translate yet!</Text>
         )}
       </Stack>
 
@@ -135,7 +135,7 @@ function Translations({ document: { displayed: document, draft, published } }) {
 
   function onQueryError(e) {
     reportError(e)
-    alert('Er iets mis, probeer het nog eens')
+    alert('Something went wrong, please try again')
   }
 }
 
@@ -183,7 +183,7 @@ function Language({ title, children }) {
 }
 
 function EditLink({ document, children }) {
-  const { ChildLink, routerPanesState, index } = usePaneRouter()
+  const { ChildLink } = usePaneRouter()
 
   return (
     <ChildLink key={document._id} childId={document._id} childParameters={{ type: document._type }} style={{ color: 'inherit', textDecoration: 'none' }}>
@@ -201,8 +201,8 @@ function TranslateActions({ onClickDuplicate, onClickFresh, language }) {
         <Box flex='0 0 auto'>
           <Flag country={getCountryFromIcu(icu)} />
         </Box>
-        <Button onClick={onClickFresh} icon={ComposeIcon} tone='primary' mode='ghost' text='Blanco vertaling aanmaken' style={{ width: '100%'}} />
-        <Button onClick={onClickDuplicate} icon={DocumentsIcon} tone='primary' text={`${pluginConfig.languages[language].adjective} kopie maken`} style={{ width: '100%'}} />
+        <Button onClick={onClickFresh} icon={ComposeIcon} tone='primary' mode='ghost' text='Create empty translation' style={{ width: '100%'}} />
+        <Button onClick={onClickDuplicate} icon={DocumentsIcon} tone='primary' text={`Duplicate in ${pluginConfig.languages[language].title.toLowerCase()}`} style={{ width: '100%'}} />
       </Flex>
     </Card>
   )
@@ -212,7 +212,7 @@ function MissingTranslationsDialog({ documents, onClose, onContinue }) {
   return (
     <Dialog
       width={1}
-      header='Let op!'
+      header='Caution'
       footer={
         <Grid columns={2} gap={2} paddingX={4} paddingY={3}>
           <Button onClick={onClose} mode='ghost' style={{ textAlign: 'center' }}>Cancel</Button>
@@ -224,7 +224,7 @@ function MissingTranslationsDialog({ documents, onClose, onContinue }) {
       <Box padding={4}>
         <Stack space={4}>
           <Text>
-            Niet alle gekoppelde documenten hebben een gepubliceerde vertaling:
+            There are references to untranslated documents:
           </Text>
           <ul style={{ listStyleType: 'none', margin: 0, padding: 0 }}>
             {documents.map(document => (
@@ -236,9 +236,9 @@ function MissingTranslationsDialog({ documents, onClose, onContinue }) {
             ))}
           </ul>
 
-          <Text>De missende documentvertalingen zijn niet verplicht. Kies voor <strong>continue</strong> om een vertaling van dit document aan te maken zonder deze gekoppelde documenten.</Text>
+          <Text>Translate all references before creating a duplicate is not required. Choose <strong>continue</strong> to create a clone without the untranslated references.</Text>
           <Text size={1} muted>
-            Als je te maken hebt met te veel (of circulaire) koppelingen kun je er ook voor kiezen om een nieuw document aan te maken.
+            If you're dealing with a lot (or even circular) references, you should create an empty translation instead.
           </Text>
         </Stack>
       </Box>
