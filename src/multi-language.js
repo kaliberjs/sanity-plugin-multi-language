@@ -1,8 +1,11 @@
 import * as uuid from 'uuid'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
 import { Language } from './Language'
+import client from 'part:@sanity/base/client'
 
 export { Translations, typeHasLanguage } from './Translations'
+
+const sanityClient = client.withConfig({ apiVersion: '2022-03-16' })
 
 export function withMultipleLanguages({ fieldset = undefined } = {}) {
   return schema => {
@@ -44,6 +47,13 @@ function addFieldsToSchema(schema, { fieldset }) {
   }
 
   async function newInitialValue(...args) {
+    const segments = decodeURIComponent(window.location.pathname).split(';')
+    const currentSegment = segments.slice(-1).shift()
+    const [parentId] = segments.slice(-1).shift()?.split(',')
+    const parent = currentSegment?.includes('parentRefPath') 
+      ? await sanityClient.fetch('*[_id == $parentId][0] { language }', { parentId })
+      : null
+    
     const result = await (
       typeof schema.initialValue === 'function'
         ? schema.initialValue(...args)
@@ -52,7 +62,7 @@ function addFieldsToSchema(schema, { fieldset }) {
 
     return {
       ...result,
-      language: pluginConfig.defaultLanguage,
+      language: parent?.language ?? pluginConfig.defaultLanguage,
       translationId: uuid.v4()
     }
   }
