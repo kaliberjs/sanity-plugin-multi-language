@@ -1,5 +1,6 @@
 import * as uuid from 'uuid'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
+import { Language } from './Language'
 
 export { Translations, typeHasLanguage } from './Translations'
 
@@ -22,7 +23,8 @@ function addFieldsToSchema(schema, { fieldset }) {
     type: 'string',
     fieldset,
     readOnly: true,
-    hidden: process.env.NODE_ENV === 'production'
+    hidden: process.env.NODE_ENV === 'production',
+    inputComponent: Language
   }
 
   const translationId = {
@@ -32,12 +34,12 @@ function addFieldsToSchema(schema, { fieldset }) {
     fieldset,
     of: [{ type: 'string' }],
     readOnly: true,
-    hidden: process.env.NODE_ENV === 'production'
+    hidden: ({ user }) => user.role !== 'administrator'
   }
 
   return {
     ...schema,
-    fields: [...schema.fields, language, translationId],
+    fields: [language, translationId, ...schema.fields],
     initialValue: newInitialValue
   }
 

@@ -1,5 +1,4 @@
 import React from 'react'
-import Flags from 'country-flag-icons/react/3x2'
 import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from 'react-query'
 import * as uuid from 'uuid'
 import groq from 'groq'
@@ -14,6 +13,8 @@ import { Container, Stack, Flex, Box, Inline, Card, Dialog, Grid, Text, Spinner,
 import { SanityPreview } from '@sanity/base/preview'
 import { useRouter } from '@sanity/base/router'
 import { DocumentsIcon, ComposeIcon } from '@sanity/icons'
+import { Flag } from './Flag'
+import { getCountryFromIcu } from './machinery/getCountryFromIcu'
 
 // Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
 // import { reportError } from '../../../machinery/reportError'
@@ -297,11 +298,6 @@ function PreviewBase({ document, flag = undefined, muted }) {
   )
 }
 
-function Flag({ country }) {
-  const Flag = Flags[country]
-  return <Flag className={styles.componentFlag} />
-}
-
 async function getTranslations(context) {
   const { queryKey: [, { document }] } = context
   if (!document) return null
@@ -485,7 +481,3 @@ function removeExcludedReferences(data, exclude) {
     : mapValues(data, x => removeExcludedReferences(x, exclude))
 }
 
-function getCountryFromIcu(icu) {
-  const [, country] = icu.split('_')
-  return country
-}

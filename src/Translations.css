@@ -20,11 +20,6 @@
   }
 }
 
-.componentFlag {
-  width: 1.5em !important;
-  height: 1em !important;
-}
-
 .languageActions {
   display: flex;
   flex-direction: column;
