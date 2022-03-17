@@ -53,6 +53,11 @@ function Translations({ document: { displayed: document, draft, published } }) {
   const paneRouter = usePaneRouter()
   const router = useRouter()
 
+  useOnChildDocumentDeletedDeleteHack(() => {
+    closeChildPanes()
+    queryClient.invalidateQueries(['translations'])
+  })
+
   // TODO: Show toast on error
 
   const { mutate: addFreshTranslation } = useMutation({
@@ -151,6 +156,10 @@ function Translations({ document: { displayed: document, draft, published } }) {
   function handleQueryError(e) {
     reportError(e)
     alert('Something went wrong, please try again')
+  }
+
+  function closeChildPanes() {
+    router.navigate({ panes: paneRouter.routerPanesState.slice(0, paneRouter.groupIndex + 1) })
   }
 }
 
@@ -295,6 +304,29 @@ function PreviewBase({ document, flag = undefined, muted }) {
         </Box>
       </Flex>
     </Card>
+  )
+}
+
+function useOnChildDocumentDeletedDeleteHack(onDelete) {
+  const paneRouter = usePaneRouter()
+  const callbackRef = React.useRef(null)
+  callbackRef.current = onDelete
+
+  const [lastPane] = paneRouter.routerPanesState[paneRouter.groupIndex + 1] ?? [{ id: 'no-doc', params: {} }]
+  const editState = useEditState(lastPane.id.replace(/^drafts\./, ''), lastPane.params.type)
+  const previousDocRef = React.useRef(editState.draft ?? editState.published)
+
+  React.useEffect(
+    () => { 
+      const doc = editState.draft ?? editState.published
+
+      if (previousDocRef.current && !doc) {
+        callbackRef.current()
+      }
+
+      previousDocRef.current = doc
+    },
+    [editState]
   )
 }
 

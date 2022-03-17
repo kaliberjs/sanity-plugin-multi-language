@@ -7,7 +7,9 @@ import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
 export function Language({ value }) {
   if (!value) {
     return (
-      <Card padding={3} tone='critical' shadow={1} radius={2}><Text>This is not right, this document doesn't have a language associated with it.</Text></Card>
+      <Card padding={3} tone='critical' shadow={1} radius={2}>
+        <Text>This is not right, this document doesn't have a language associated with it.</Text>
+      </Card>
     )
   }
 
