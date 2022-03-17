@@ -9,7 +9,7 @@ const LanguageFwd = React.forwardRef(Language)
 
 export { LanguageFwd as Language }
 
-function Language({ value }, ref) {
+function Language({ value = '' }, ref) {
   if (!value) return (
     <Card padding={3} tone='critical' shadow={1} radius={2}>
       <input type='hidden' {...{ value, ref }} />

@@ -47,13 +47,6 @@ function addFieldsToSchema(schema, { fieldset }) {
   }
 
   async function newInitialValue(...args) {
-    const segments = decodeURIComponent(window.location.pathname).split(';')
-    const currentSegment = segments.slice(-1).shift()
-    const [parentId] = segments.slice(-1).shift()?.split(',')
-    const parent = currentSegment?.includes('parentRefPath') 
-      ? await sanityClient.fetch('*[_id == $parentId][0] { language }', { parentId })
-      : null
-    
     const result = await (
       typeof schema.initialValue === 'function'
         ? schema.initialValue(...args)
@@ -62,8 +55,18 @@ function addFieldsToSchema(schema, { fieldset }) {
 
     return {
       ...result,
-      language: parent?.language ?? pluginConfig.defaultLanguage,
+      language: getParentRefLanguageHack() ?? pluginConfig.defaultLanguage,
       translationId: uuid.v4()
     }
   }
+}
+
+function getParentRefLanguageHack() {
+  const segments = decodeURIComponent(window.location.pathname).split(';')
+  const currentSegment = segments.slice(-1).shift()
+  const [parentId] = segments.slice(-2).shift()?.split(',')
+
+  return currentSegment?.includes('parentRefPath')
+    ? await sanityClient.fetch(`*[_id in [$parentId, 'drafts.' + $parentId]][0].language`, { parentId })
+    : null
 }
