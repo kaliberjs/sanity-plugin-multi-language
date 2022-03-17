@@ -2,7 +2,7 @@ import React from 'react'
 import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from 'react-query'
 import * as uuid from 'uuid'
 import groq from 'groq'
-import sanityClient from 'part:@sanity/base/client'
+import client from 'part:@sanity/base/client'
 import schema from 'part:@sanity/base/schema'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
 import { usePaneRouter } from '@sanity/desk-tool'
@@ -16,9 +16,12 @@ import { DocumentsIcon, ComposeIcon } from '@sanity/icons'
 import { Flag } from './Flag'
 import { getCountryFromIcu } from './machinery/getCountryFromIcu'
 
+
 // Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
 // import { reportError } from '../../../machinery/reportError'
 import styles from './Translations.css'
+
+const sanityClient = client.withConfig({ apiVersion: '2022-03-16' })
 
 function reportError(e) {
   console.error(e)

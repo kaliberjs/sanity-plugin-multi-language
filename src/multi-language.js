@@ -37,7 +37,7 @@ function addFieldsToSchema(schema, { fieldset }) {
     fieldset,
     of: [{ type: 'string' }],
     readOnly: true,
-    hidden: ({ user }) => user.role !== 'administrator'
+    hidden: ({ currentUser }) => !currentUser.roles.some(x => x.name === 'administrator')
   }
 
   return {
