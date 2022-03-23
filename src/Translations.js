@@ -1,21 +1,27 @@
-// TODO: @Peeke, hier meer sanity ui gebruiken?
-
 import React from 'react'
 import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from 'react-query'
 import * as uuid from 'uuid'
-import { FaCopy, FaPen } from 'react-icons/fa'
 import groq from 'groq'
-import { validateDocument } from '@sanity/validation'
-import Button from 'part:@sanity/components/buttons/default'
-import sanityClient from 'part:@sanity/base/client'
-import Preview from 'part:@sanity/base/preview'
-import { IntentLink } from 'part:@sanity/base/router'
+import client from 'part:@sanity/base/client'
 import schema from 'part:@sanity/base/schema'
-import Dialog from 'part:@sanity/components/dialogs/confirm'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
+import { usePaneRouter } from '@sanity/desk-tool'
+import { PublishedStatus } from '@sanity/desk-tool/lib/components/PublishedStatus'
+import { DraftStatus } from '@sanity/desk-tool/lib/components/DraftStatus'
+import { useEditState } from '@sanity/react-hooks'
+import { Container, Stack, Flex, Box, Inline, Card, Dialog, Grid, Text, Spinner, Button } from '@sanity/ui'
+import { SanityPreview } from '@sanity/base/preview'
+import { useRouter } from '@sanity/base/router'
+import { DocumentsIcon, ComposeIcon } from '@sanity/icons'
+import { Flag } from './Flag'
+import { getCountryFromIcu } from './machinery/getCountryFromIcu'
+
+
 // Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
 // import { reportError } from '../../../machinery/reportError'
 import styles from './Translations.css'
+
+const sanityClient = client.withConfig({ apiVersion: '2022-03-16' })
 
 function reportError(e) {
   console.error(e)
@@ -40,116 +46,162 @@ export function typeHasLanguage(type) {
 function Translations({ document: { displayed: document, draft, published } }) {
   const [modal, setModal] = React.useState(null)
   const schemaType = schema.get(document._type)
-
   const queryClient = useQueryClient()
   const { data, isLoading, isSuccess, isError } = useQuery({
     queryKey: ['translations', { document }],
     queryFn: getTranslations,
-    onError: onQueryError
+    onError: handleQueryError
   })
   const translations = data ?? []
+  const paneRouter = usePaneRouter()
+  const router = useRouter()
+
+  useOnChildDocumentDeletedHack(() => {
+    closeChildPanes()
+    queryClient.invalidateQueries(['translations'])
+  })
 
   // TODO: Show toast on error
 
   const { mutate: addFreshTranslation } = useMutation({
     mutationFn: translateFresh,
-    onSuccess() { queryClient.invalidateQueries(['translations']) },
-    onError: onQueryError
+    onSuccess: handleTranslationCreated,
+    onError: handleQueryError
   })
 
   const { mutate: addDuplicateTranslation } = useMutation({
     mutationFn: translateDuplicate,
     onSuccess({ status, data }) {
-      if (status === 'success') queryClient.invalidateQueries(['translations'])
+      if (status === 'success') handleTranslationCreated({ data })
       else if (status === 'untranslatedReferencesFound') showUntranslatedReferences(data)
     },
-    onError: onQueryError
+    onError: handleQueryError
   })
 
   const { mutate: addDuplicateTranslationsWithoutReferences } = useMutation({
     mutationFn: translateDuplicateWithoutReferences,
-    onSuccess() { queryClient.invalidateQueries(['translations']) },
-    onError: onQueryError,
+    onSuccess: handleTranslationCreated,
+    onError: handleQueryError,
     onSettled() { setModal(null) },
   })
 
   return (
-    <article className={styles.component}>
-      <h3>Vertalingen</h3>
-      {isLoading && <p>Laden...</p>}
-      {isError && <p>Er ging iets mis...</p>}
+    <Container
+      paddingBottom={9}
+      paddingTop={5}
+      paddingX={4}
+      sizing='border'
+      width={1}
+    >
+      <Stack space={2}>
+        <Text weight='semibold'>Translations</Text>
+        
+        {isLoading && (
+          <Flex justify="center">
+            <Spinner muted />
+          </Flex>
+        )}
+        
+        {isError && (
+          <Card padding={[3, 3, 4]}
+            radius={2}
+            shadow={1}
+            tone='critical'
+          >
+            <Text>Something went wrong...</Text>
+          </Card>
+        )}
 
-      {isSuccess && (
-        (published || draft)
-          ? <Languages
-              original={document}
-              {...{ translations, schemaType }}
-              onTranslateFresh={language => {
-                addFreshTranslation({ original: document, language })
-              }}
-              onTranslateDuplicate={language => {
-                addDuplicateTranslation({ original: document, language })
-              }}
-            />
-          : <p>Het lijkt erop dat er nog niets is om te vertalen!</p>
-      )}
+        {isSuccess && (
+          (published || draft)
+            ? <Languages
+                original={document}
+                {...{ translations, schemaType }}
+                onTranslateFresh={language => {
+                  addFreshTranslation({ original: document, language })
+                }}
+                onTranslateDuplicate={language => {
+                  addDuplicateTranslation({ original: document, language })
+                }}
+              />
+            : <Text>It seems there isn't anything to translate yet!</Text>
+        )}
+      </Stack>
 
       {modal && (
         <MissingTranslationsDialog
           documents={modal.references}
           onClose={() => setModal(null)}
-          canContinueWithoutReferences={modal.cleanDuplicate}
           onContinue={() => {
             addDuplicateTranslationsWithoutReferences({ original: modal.cleanDuplicate, language: modal.language })
           }}
         />
       )}
-    </article>
+    </Container>
   )
+
+  function handleTranslationCreated({ data }) {
+    queryClient.invalidateQueries(['translations'])
+    
+    router.navigate({
+      panes: [
+        ...paneRouter.routerPanesState,
+        [{ id: data._id, params: { type: data._type } }],
+      ]
+    })
+  }
 
   function showUntranslatedReferences(data) {
     const { references, cleanDuplicate, language } = data
     setModal({ references, cleanDuplicate, language })
   }
 
-  function onQueryError(e) {
+  function handleQueryError(e) {
     reportError(e)
-    alert('Er iets mis, probeer het nog eens')
+    alert('Something went wrong, please try again')
+  }
+
+  function closeChildPanes() {
+    router.navigate({ panes: paneRouter.routerPanesState.slice(0, paneRouter.groupIndex + 1) })
   }
 }
 
-function Languages({ original, translations, schemaType, onTranslateFresh, onTranslateDuplicate }) {
+function Languages({ original, translations, onTranslateFresh, onTranslateDuplicate }) {
   return (
     <ul className={styles.languages}>
-      {Object.keys(pluginConfig.languages).map(language => {
-        const document = translations[language]
-        const isCurrentDocument = document?._id === original._id
-        return (
-          <Language
-            key={language}
-            title={pluginConfig.languages[language].title}
-            {...{ isCurrentDocument }}
-          >
-            {document
-              ? <EditLink {...{ document, schemaType }} />
-              : <TranslateActions
+      {Object.keys(pluginConfig.languages)
+        .filter(x => x !== original.language)
+        .map(language => {
+          const document = translations[language]
+          return (
+            <Language
+              key={language}
+              title={pluginConfig.languages[language].title}
+            >
+              {document ? (
+                <EditLink {...{ document }}>
+                  <PreviewWithFlag {...{ document }} />
+                </EditLink> 
+              ) : (
+                <TranslateActions
                   {...{ language } }
                   onClickDuplicate={() => onTranslateDuplicate(language)}
                   onClickFresh={() => onTranslateFresh(language)}
                 />
-            }
-          </Language>
-        )
-      })}
+              )}
+            </Language>
+          )
+        })
+      }
     </ul>
   )
 }
 
-function Language({ title, isCurrentDocument, children }) {
+function Language({ title, children }) {
   return (
     <li className={styles.componentLanguage}>
       <div className={styles.languageTitle}>
-        {title}{isCurrentDocument && ' (huidig document)'}
+        <Text size={1}>{title}</Text>
       </div>
 
       {children}
@@ -157,61 +209,127 @@ function Language({ title, isCurrentDocument, children }) {
   )
 }
 
-function EditLink({ document, schemaType }) {
+function EditLink({ document, children }) {
+  const { ChildLink } = usePaneRouter()
+
   return (
-    <IntentLink
-      className={styles.link}
-      intent="edit"
-      params={{ id: document._id, type: document._type }}
-    >
-      <Preview value={document} type={schemaType} />
-    </IntentLink>
+    <ChildLink key={document._id} childId={document._id} childParameters={{ type: document._type }} style={{ color: 'inherit', textDecoration: 'none' }}>
+      {children}
+    </ChildLink>
   )
 }
 
 function TranslateActions({ onClickDuplicate, onClickFresh, language }) {
+  const icu = pluginConfig.languages[language].icu
+
   return (
-    <div className={styles.languageActions}>
-      <Button onClick={onClickDuplicate} icon={FaCopy}>
-        {pluginConfig.languages[language].adjective} kopie maken
-      </Button>
-      <Button onClick={onClickFresh} icon={FaPen}>
-        Nieuw document aanmaken
-      </Button>
-    </div>
+    <Card shadow={1} paddingY={2} paddingLeft={3} paddingRight={2} radius={2}>
+      <Flex gap={3} align='center'> 
+        <Box flex='0 0 auto'>
+          <Flag country={getCountryFromIcu(icu)} />
+        </Box>
+        <Button onClick={onClickFresh} icon={ComposeIcon} tone='primary' mode='ghost' text='Create empty translation' style={{ width: '100%'}} />
+        <Button onClick={onClickDuplicate} icon={DocumentsIcon} tone='primary' text={`Duplicate in ${pluginConfig.languages[language].title.toLowerCase()}`} style={{ width: '100%'}} />
+      </Flex>
+    </Card>
   )
 }
 
-function MissingTranslationsDialog({ documents, onClose, canContinueWithoutReferences, onContinue }) {
+function MissingTranslationsDialog({ documents, onClose, onContinue }) {
   return (
     <Dialog
-      title='Niet alle gekoppelde documenten hebben een gepubliceerde vertaling'
-      cancelButtonText='Annuleren'
-      cancelColor='success'
-      onConfirm={canContinueWithoutReferences ? onContinue : null}
-      confirmButtonText={canContinueWithoutReferences ? 'Toch doorgaan' : null}
-      confirmColor={canContinueWithoutReferences ? 'danger' : null}
-      onEscape={onClose} onClickOutside={onClose} onCancel={onClose}
+      width={1}
+      header='Caution'
+      footer={
+        <Grid columns={2} gap={2} paddingX={4} paddingY={3}>
+          <Button onClick={onClose} mode='ghost' style={{ textAlign: 'center' }}>Cancel</Button>
+          <Button tone='critical' onClick={onContinue} style={{ textAlign: 'center' }}>Continue</Button>
+        </Grid>
+      }
       {...{ onClose }}
     >
-      <div className={styles.componentMissingTranslationsDialog}>
-        <ul className={styles.missingTranslationsList}>
-          {documents.map(document => (
-            <li key={document._id}>
-              <EditLink {...{ document }} schemaType={schema.get(document._type)} />
-            </li>
-          ))}
-        </ul>
+      <Box padding={4}>
+        <Stack space={4}>
+          <Text>
+            There are references to untranslated documents:
+          </Text>
+          <ul style={{ listStyleType: 'none', margin: 0, padding: 0 }}>
+            {documents.map(document => (
+              <li key={document._id}>
+                <EditLink {...{ document }}>
+                  <Preview {...{ document }} />
+                </EditLink>
+              </li>
+            ))}
+          </ul>
 
-        {canContinueWithoutReferences && (
-          <p>De missende documentvertalingen zijn niet verplicht. Kies voor <strong>toch doorgaan</strong> om een vertaling van dit document aan te maken zonder deze gekoppelde documenten.</p>
-        )}
-
-        <footer className={styles.footer}>
-          Als je te maken hebt met te veel (of circulaire) koppelingen kun je er ook voor kiezen om een nieuw document aan te maken.
-        </footer>
-      </div>
+          <Text>Translate all references before creating a duplicate is not required. Choose <strong>continue</strong> to create a clone without the untranslated references.</Text>
+          <Text size={1} muted>
+            If you're dealing with a lot (or even circular) references, you should create an empty translation instead.
+          </Text>
+        </Stack>
+      </Box>
     </Dialog>
+  )
+}
+
+function Preview({ document, muted = undefined }) {
+  return <PreviewBase {...{ document, muted }} />
+}
+
+function PreviewWithFlag({ document, muted = undefined }) {
+  const icu = pluginConfig.languages[document.language].icu
+  return <PreviewBase flag={<Flag country={getCountryFromIcu(icu)} />} {...{ document, muted }} />
+}
+
+function PreviewBase({ document, flag = undefined, muted }) {
+  const schemaType = React.useMemo(() => schema.get(document._type), [document._type])
+  const editState = useEditState(document._id.replace(/^drafts\./, ''), document._type)
+  const { published, draft } = editState ?? {}
+
+  return (
+    <Card
+      shadow={muted ? 0 : 1} 
+      tone={muted ? 'transparent' : 'default'} 
+      padding={2} 
+      radius={2}
+    >
+      <Flex gap={2} paddingX={2} align='center'>
+        {flag}
+        <Box flex={1}>
+          <SanityPreview type={schemaType} value={document} layout='default' />
+        </Box>
+        <Box>
+          <Inline space={4}>
+            <PublishedStatus document={published} />
+            <DraftStatus document={draft} />
+          </Inline>
+        </Box>
+      </Flex>
+    </Card>
+  )
+}
+
+function useOnChildDocumentDeletedHack(onDelete) {
+  const paneRouter = usePaneRouter()
+  const callbackRef = React.useRef(null)
+  callbackRef.current = onDelete
+
+  const [lastPane] = paneRouter.routerPanesState[paneRouter.groupIndex + 1] ?? [{ id: 'no-doc', params: {} }]
+  const editState = useEditState(lastPane.id.replace(/^drafts\./, ''), lastPane.params.type)
+  const previousDocRef = React.useRef(editState.draft ?? editState.published)
+
+  React.useEffect(
+    () => { 
+      const doc = editState.draft ?? editState.published
+
+      if (previousDocRef.current && !doc) {
+        callbackRef.current()
+      }
+
+      previousDocRef.current = doc
+    },
+    [editState]
   )
 }
 
@@ -277,13 +395,12 @@ async function addDuplicatedTranslation({ original, language }) {
 
   async function untranslatedReferencesFound(untranslatedReferences) {
     const duplicate = removeExcludedReferences(original, untranslatedReferences.map(x => x._id))
-    const valid = (await validateDocument(duplicate, schema)).every(x => x.level !== 'error')
 
     return {
       status: 'untranslatedReferencesFound',
       data: {
         references: untranslatedReferences,
-        cleanDuplicate: valid ? duplicate : null,
+        cleanDuplicate: duplicate,
         language
       }
     }
@@ -293,7 +410,7 @@ async function addDuplicatedTranslation({ original, language }) {
 async function createDuplicateTranslation({ original, language }) {
   const { _id, _createdAt, _rev, _updatedAt, ...document } = original
   const { translationId } = document
-console.log(document)
+
   const [, duplicate] = await Promise.all([
     sanityClient.patch(_id).setIfMissing({ translationId }).commit(), // TODO: kan dit echt gebeuren?
     sanityClient.create({
@@ -392,9 +509,10 @@ function mapValues(o, f) {
 
 function removeExcludedReferences(data, exclude) {
   if (!data || typeof data !== 'object') return data
-  if (isReference(data) && exclude.includes(data._ref)) return null
+  if (isReference(data) && exclude.includes(data._ref)) return
 
   return Array.isArray(data)
     ? data.map(x => removeExcludedReferences(x, exclude)).filter(Boolean)
     : mapValues(data, x => removeExcludedReferences(x, exclude))
 }
+

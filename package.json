@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "keywords": [
     "sanity",
-    "sanity-plugin"
+    "sanity-plugin",
+    "multi-language"
   ],
   "license": "MIT",
   "main": "lib/multi-language.js",
@@ -27,11 +28,11 @@
     "prepare": "[ -f scripts/addPeerDependencies.js ] && node scripts/addPeerDependencies.js"
   },
   "peerDependencies": {
-    "@sanity/validation": "^2.21.7",
+    "country-flag-icons": "^1.4.21",
     "groq": "^2.15.0",
     "react": "^17.0.2",
     "react-icons": "^4.3.1",
-    "react-query": "^3.29.0",
+    "react-query": "^3.34.16",
     "uuid": "^8.3.2"
   },
   "devDependencies": {

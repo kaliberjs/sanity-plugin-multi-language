@@ -2,14 +2,14 @@
   "defaultLanguage": "nl",
   "languages": {
     "nl": {
-      "title": "Nederlands",
-      "adjective": "Nederlandse",
+      "title": "Dutch",
+      "adjective": "dutch",
       "language": "nl",
       "icu": "nl_NL"
     },
     "en": {
-      "title": "Engels (US)",
-      "adjective": "Engelse",
+      "title": "English (US)",
+      "adjective": "english",
       "language": "en",
       "icu": "en_US"
     }

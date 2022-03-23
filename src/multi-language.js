@@ -1,7 +1,10 @@
 import * as uuid from 'uuid'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
-
+import { Language } from './Language'
+import client from 'part:@sanity/base/client'
 export { Translations, typeHasLanguage } from './Translations'
+
+const sanityClient = client.withConfig({ apiVersion: '2022-03-16' })
 
 export function withMultipleLanguages({ fieldset = undefined } = {}) {
   return schema => {
@@ -22,7 +25,8 @@ function addFieldsToSchema(schema, { fieldset }) {
     type: 'string',
     fieldset,
     readOnly: true,
-    hidden: process.env.NODE_ENV === 'production'
+    hidden: process.env.NODE_ENV === 'production',
+    inputComponent: Language
   }
 
   const translationId = {
@@ -32,12 +36,12 @@ function addFieldsToSchema(schema, { fieldset }) {
     fieldset,
     of: [{ type: 'string' }],
     readOnly: true,
-    hidden: process.env.NODE_ENV === 'production'
+    hidden: ({ currentUser }) => !currentUser.roles.some(x => x.name === 'administrator')
   }
 
   return {
     ...schema,
-    fields: [...schema.fields, language, translationId],
+    fields: [language, translationId, ...schema.fields],
     initialValue: newInitialValue
   }
 
@@ -50,8 +54,18 @@ function addFieldsToSchema(schema, { fieldset }) {
 
     return {
       ...result,
-      language: pluginConfig.defaultLanguage,
+      language: (await getParentRefLanguageHack()) ?? pluginConfig.defaultLanguage,
       translationId: uuid.v4()
     }
   }
+}
+
+async function getParentRefLanguageHack() {
+  const segments = decodeURIComponent(window.location.pathname).split(';')
+  const currentSegment = segments.slice(-1).shift()
+  const [parentId] = segments.slice(-2).shift()?.split(',')
+
+  return (currentSegment?.includes('parentRefPath') && parentId)
+    ? await sanityClient.fetch(`*[_id in [$parentId, 'drafts.' + $parentId]][0].language`, { parentId })
+    : null
 }
