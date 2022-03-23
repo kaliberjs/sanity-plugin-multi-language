@@ -56,7 +56,7 @@ function Translations({ document: { displayed: document, draft, published } }) {
   const paneRouter = usePaneRouter()
   const router = useRouter()
 
-  useOnChildDocumentDeletedDeleteHack(() => {
+  useOnChildDocumentDeletedHack(() => {
     closeChildPanes()
     queryClient.invalidateQueries(['translations'])
   })
@@ -310,7 +310,7 @@ function PreviewBase({ document, flag = undefined, muted }) {
   )
 }
 
-function useOnChildDocumentDeletedDeleteHack(onDelete) {
+function useOnChildDocumentDeletedHack(onDelete) {
   const paneRouter = usePaneRouter()
   const callbackRef = React.useRef(null)
   callbackRef.current = onDelete
