@@ -9,8 +9,13 @@ const LanguageFwd = React.forwardRef(Language)
 
 export { LanguageFwd as Language }
 
-function Language({ value }, ref) {
-  if (!value) return <input type='hidden' {...{ value, ref }} />
+function Language({ value = '' }, ref) {
+  if (!value) return (
+    <Card padding={3} tone='critical' shadow={1} radius={2}>
+      <input type='hidden' {...{ value, ref }} />
+      <Text>This is not right, this document doesn't have a language associated with it.</Text>
+    </Card>
+  )
 
   const { icu, title } = pluginConfig.languages[value]
 
