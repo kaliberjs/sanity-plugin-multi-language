@@ -27,12 +27,18 @@
     "prepublishOnly": "sanipack build && sanipack verify",
     "prepare": "[ -f scripts/addPeerDependencies.js ] && node scripts/addPeerDependencies.js"
   },
+  "dependencies": {
+    "@sanity/icons": "^1.2.7",
+    "@sanity/ui": "^0.37.7"
+  },
   "peerDependencies": {
-    "country-flag-icons": "^1.4.21",
-    "groq": "^2.15.0",
-    "react": "^17.0.2",
-    "react-icons": "^4.3.1",
-    "react-query": "^3.34.16",
+    "@sanity/base": "^2.29.3",
+    "@sanity/desk-tool": "^2.29.4",
+    "@sanity/react-hooks": "^2.29.3",
+    "country-flag-icons": "^1.4.25",
+    "groq": "^2.29.3",
+    "react": "^18.0.0",
+    "react-query": "^3.34.19",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
