@@ -69,3 +69,5 @@ yarn publish
 git push
 git push --tags
 ```
+---
+![](https://media.giphy.com/media/3orif0Pxk3I4WQj46k/giphy.gif)
