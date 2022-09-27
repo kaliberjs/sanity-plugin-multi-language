@@ -1,47 +1,69 @@
 {
-  "name": "@kaliber/sanity-plugin-multi-language",
+  "name": "sanity-plugin-multi-language",
   "version": "1.0.0",
-  "keywords": [
-    "sanity",
-    "sanity-plugin",
-    "multi-language"
-  ],
+  "description": "",
+  "author": "Peeke Kuepers <pkuepers@kaliber.net>",
   "license": "MIT",
-  "main": "lib/multi-language.js",
-  "files": [
-    "src/**",
-    "lib/**",
-    "sanity.json",
-    "config.dist.json",
-    "LICENCE",
-    "package.json",
-    "readme.md"
-  ],
-  "publishConfig": {
-    "access": "public"
+  "source": "./src/index.js",
+  "main": "./lib/cjs/index.js",
+  "module": "./lib/esm/index.js",
+  "exports": {
+    ".": {
+      "require": "./lib/cjs/index.js",
+      "default": "./lib/esm/index.js"
+    }
   },
+  "files": [
+    "src",
+    "lib",
+    "v2-incompatible.js",
+    "sanity.json"
+  ],
   "scripts": {
-    "build": "sanipack build",
-    "watch": "sanipack build --watch",
-    "verify": "sanipack verify",
-    "prepublishOnly": "sanipack build && sanipack verify",
-    "prepare": "[ -f scripts/addPeerDependencies.js ] && node scripts/addPeerDependencies.js"
+    "clean": "rimraf lib",
+    "lint": "eslint .",
+    "prebuild": "npm run clean && plugin-kit verify-package --silent",
+    "build": "parcel build --no-cache",
+    "watch": "parcel watch",
+    "link-watch": "plugin-kit link-watch",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/kaliberjs/sanity-plugin-multi-language.git"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   },
   "dependencies": {
-    "@sanity/icons": "^1.2.7",
-    "@sanity/ui": "^0.37.7"
-  },
-  "peerDependencies": {
-    "@sanity/base": "^2.29.3",
-    "@sanity/desk-tool": "^2.29.4",
-    "@sanity/react-hooks": "^2.29.3",
-    "country-flag-icons": "^1.4.25",
-    "groq": "^2.29.3",
-    "react": "^18.0.0",
-    "react-query": "^3.34.19",
-    "uuid": "^8.3.2"
+    "@sanity/incompatible-plugin": "^1.0.1",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "sanipack": "^2.1.0"
-  }
+    "@parcel/packager-ts": "2.7.0",
+    "@parcel/transformer-typescript-types": "2.7.0",
+    "@sanity/plugin-kit": "^1.0.2",
+    "@typescript-eslint/eslint-plugin": "^5.38.1",
+    "@typescript-eslint/parser": "^5.38.1",
+    "eslint": "^8.24.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-sanity": "^6.0.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-react": "^7.31.8",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "parcel": "^2.7.0",
+    "prettier": "^2.7.1",
+    "react": "^17.0.0 || ^18.0.0",
+    "rimraf": "^3.0.2",
+    "sanity": "^3.0.0-dev-preview.15",
+    "typescript": "^4.8.3"
+  },
+  "peerDependencies": {
+    "react": "^17.0.0 || ^18.0.0",
+    "sanity": "dev-preview"
+  },
+  "bugs": {
+    "url": "https://github.com/kaliberjs/sanity-plugin-multi-language/issues"
+  },
+  "homepage": "https://github.com/kaliberjs/sanity-plugin-multi-language#readme"
 }
