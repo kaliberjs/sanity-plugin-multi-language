@@ -32,14 +32,14 @@
     "@sanity/ui": "^0.37.7"
   },
   "peerDependencies": {
-    "@sanity/base": "^2.29.3",
-    "@sanity/desk-tool": "^2.29.4",
-    "@sanity/react-hooks": "^2.29.3",
-    "country-flag-icons": "^1.4.25",
-    "groq": "^2.29.3",
-    "react": "^18.0.0",
-    "react-query": "^3.34.19",
-    "uuid": "^8.3.2"
+    "@sanity/base": "^2.34.0",
+    "@sanity/desk-tool": "^2.34.0",
+    "@sanity/react-hooks": "^2.34.0",
+    "country-flag-icons": "^1.5.5",
+    "groq": "^2.33.2",
+    "react": "^18.2.0",
+    "react-query": "^3.39.2",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "sanipack": "^2.1.0"
