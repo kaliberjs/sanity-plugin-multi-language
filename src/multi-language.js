@@ -36,7 +36,10 @@ function addFieldsToSchema(schema, { fieldset }) {
     fieldset,
     of: [{ type: 'string' }],
     readOnly: true,
-    hidden: ({ currentUser }) => !currentUser.roles.some(x => x.name === 'administrator')
+    hidden: ({ currentUser }) => !currentUser.roles.some(x => x.name === 'administrator'),
+    kaliberOptions: {
+      duplicate: () => uuid.v4()
+    }
   }
 
   return {
