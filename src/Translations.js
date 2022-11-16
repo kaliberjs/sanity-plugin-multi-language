@@ -415,7 +415,7 @@ async function createDuplicateTranslation({ original, language }) {
     sanityClient.patch(_id).setIfMissing({ translationId }).commit(), // TODO: kan dit echt gebeuren?
     sanityClient.create({
       ...(await pointReferencesToTranslatedDocument(document, language)),
-      _id: 'drafts.' + uuid.uuid.v4(),
+      _id: 'drafts.' + uuid.v4(),
       translationId,
       language
     })
