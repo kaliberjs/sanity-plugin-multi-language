@@ -356,7 +356,7 @@ async function getTranslations(context) {
 }
 
 async function addFreshTranslation({ original, language }) {
-  const duplicateId = 'drafts.' + uuid.v5([language, original._id].join('.'), uuid.v5.URL)
+  const duplicateId = 'drafts.' + uuid.v4()
 
   const result = await sanityClient.create({
     _type: original._type, _id: duplicateId, translationId: original.translationId, language
@@ -415,7 +415,7 @@ async function createDuplicateTranslation({ original, language }) {
     sanityClient.patch(_id).setIfMissing({ translationId }).commit(), // TODO: kan dit echt gebeuren?
     sanityClient.create({
       ...(await pointReferencesToTranslatedDocument(document, language)),
-      _id: 'drafts.' + uuid.v5([language, original._id].join('.'), uuid.v5.URL),
+      _id: 'drafts.' + uuid.v4(),
       translationId,
       language
     })
@@ -515,4 +515,3 @@ function removeExcludedReferences(data, exclude) {
     ? data.map(x => removeExcludedReferences(x, exclude)).filter(Boolean)
     : mapValues(data, x => removeExcludedReferences(x, exclude))
 }
-
