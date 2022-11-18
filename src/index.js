@@ -1,5 +1,6 @@
 import {createPlugin} from 'sanity'
 import {v4 as uuid} from 'uuid'
+import {Translations} from './Translations'
 
 export const multiLanguage = createPlugin((config = {}) => {
   return {
@@ -52,7 +53,7 @@ function addFieldsToSchema(schema, {config, client}) {
 
     return {
       ...result,
-      language: (await getParentRefLanguageHack(client)) ?? config.defaultLanguage,
+      language: (await getParentRefLanguageHack(client)) ?? config.default,
       translationId: uuid(),
     }
   }
@@ -68,4 +69,15 @@ function getParentRefLanguageHack(client) {
         parentId,
       })
     : null
+}
+
+export function typeHasLanguage({schema, schemaType}) {
+  const fields = schema.get(schemaType).fields
+  return (
+    fields.some((x) => x.name === 'language') && fields.some((x) => x.name === 'translationId')
+  )
+}
+
+export function translations(S, context, config) {
+  return S.view.component(x => <Translations {...x} {...{ config }} />).title(config?.title ?? 'Translations')
 }

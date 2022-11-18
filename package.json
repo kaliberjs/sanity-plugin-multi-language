@@ -36,31 +36,38 @@
     "node": ">=14.0.0"
   },
   "dependencies": {
+    "@sanity/icons": "^1.3.6",
     "@sanity/incompatible-plugin": "^1.0.1",
+    "@sanity/react-hooks": "^2.34.0",
+    "@sanity/ui": "1.0.0-beta.32",
+    "country-flag-icons": "^1.5.5",
+    "groq": "^2.33.2",
+    "react-query": "^3.39.2",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "@parcel/packager-ts": "2.7.0",
-    "@parcel/transformer-typescript-types": "2.7.0",
-    "@sanity/plugin-kit": "^1.0.2",
-    "@typescript-eslint/eslint-plugin": "^5.38.1",
-    "@typescript-eslint/parser": "^5.38.1",
-    "eslint": "^8.24.0",
+    "@parcel/packager-ts": "2.8.0",
+    "@parcel/transformer-sass": "2.8.0",
+    "@parcel/transformer-typescript-types": "2.8.0",
+    "@sanity/plugin-kit": "^2.1.8",
+    "@typescript-eslint/eslint-plugin": "^5.42.1",
+    "@typescript-eslint/parser": "^5.42.1",
+    "eslint": "^8.27.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-config-sanity": "^6.0.0",
     "eslint-plugin-prettier": "^4.2.1",
-    "eslint-plugin-react": "^7.31.8",
+    "eslint-plugin-react": "^7.31.10",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "parcel": "^2.7.0",
+    "parcel": "^2.8.0",
     "prettier": "^2.7.1",
     "react": "^17.0.0 || ^18.0.0",
     "rimraf": "^3.0.2",
-    "sanity": "^3.0.0-dev-preview.15",
-    "typescript": "^4.8.3"
+    "sanity": "3.0.0-rc.2",
+    "typescript": "^4.8.4"
   },
   "peerDependencies": {
-    "react": "^17.0.0 || ^18.0.0",
-    "sanity": "dev-preview"
+    "react": "^18.0.0",
+    "sanity": "3.0.0-rc.2"
   },
   "bugs": {
     "url": "https://github.com/kaliberjs/sanity-plugin-multi-language/issues"
