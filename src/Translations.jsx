@@ -13,8 +13,8 @@ import { getCountryFromIcu } from './machinery/getCountryFromIcu'
 
 // Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
 // import { reportError } from '../../../machinery/reportError'
-import styles from './Translations.module.scss'
-
+// import './Translations.css'
+const styles = {}
 
 function reportError(e) {
   console.error(e)
@@ -24,12 +24,17 @@ function reportError(e) {
 const queryClient = new QueryClient()
 
 export { TranslationsWithQueryClient as Translations }
+
 function TranslationsWithQueryClient({ document, config }) {
   return (
     <QueryClientProvider client={queryClient}>
       <Translations {...{ document, config }} />
     </QueryClientProvider>
   )
+}
+
+export function translations(S, context, config) {
+  return S.view.component(x => <TranslationsWithQueryClient {...x} {...{ config }} />).title(config?.title ?? 'Translations')
 }
 
 function Translations({ document: { displayed: document, draft, published }, config }) {

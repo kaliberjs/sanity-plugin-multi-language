@@ -1,18 +1,25 @@
 {
   "name": "sanity-plugin-multi-language",
   "version": "1.0.0",
-  "description": "",
-  "author": "Peeke Kuepers <pkuepers@kaliber.net>",
+  "description": "Document level translations.",
+  "keywords": [
+    "sanity",
+    "sanity-plugin"
+  ],
   "license": "MIT",
-  "source": "./src/index.js",
-  "main": "./lib/cjs/index.js",
-  "module": "./lib/esm/index.js",
+  "author": "Peeke Kuepers <pkuepers@kaliber.net>",
   "exports": {
     ".": {
-      "require": "./lib/cjs/index.js",
-      "default": "./lib/esm/index.js"
-    }
+      "source": "./src/index.js",
+      "import": "./lib/index.esm.js",
+      "require": "./lib/index.js",
+      "default": "./lib/index.esm.js"
+    },
+    "./package.json": "./package.json"
   },
+  "main": "./lib/index.js",
+  "module": "./lib/index.esm.js",
+  "source": "./src/index.js",
   "files": [
     "src",
     "lib",
@@ -20,57 +27,46 @@
     "sanity.json"
   ],
   "scripts": {
+    "prebuild": "npm run clean && plugin-kit verify-package --silent && pkg-utils",
+    "build": "pkg-utils build",
     "clean": "rimraf lib",
-    "lint": "eslint .",
-    "prebuild": "npm run clean && plugin-kit verify-package --silent",
-    "build": "parcel build --no-cache",
-    "watch": "parcel watch",
     "link-watch": "plugin-kit link-watch",
-    "prepublishOnly": "npm run build"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+ssh://git@github.com/kaliberjs/sanity-plugin-multi-language.git"
-  },
-  "engines": {
-    "node": ">=14.0.0"
+    "lint": "eslint .",
+    "prepublishOnly": "npm run build",
+    "watch": "pkg-utils watch"
   },
   "dependencies": {
-    "@sanity/icons": "^1.3.6",
-    "@sanity/incompatible-plugin": "^1.0.1",
-    "@sanity/react-hooks": "^2.34.0",
-    "@sanity/ui": "1.0.0-beta.32",
-    "country-flag-icons": "^1.5.5",
-    "groq": "^2.33.2",
-    "react-query": "^3.39.2",
-    "uuid": "^9.0.0"
+    "@sanity/incompatible-plugin": "^1.0.4"
   },
   "devDependencies": {
-    "@parcel/packager-ts": "2.8.0",
-    "@parcel/transformer-sass": "2.8.0",
-    "@parcel/transformer-typescript-types": "2.8.0",
-    "@sanity/plugin-kit": "^2.1.8",
-    "@typescript-eslint/eslint-plugin": "^5.42.1",
-    "@typescript-eslint/parser": "^5.42.1",
-    "eslint": "^8.27.0",
+    "@sanity/pkg-utils": "^1.18.0",
+    "@sanity/plugin-kit": "^2.1.17",
+    "@typescript-eslint/eslint-plugin": "^5.44.0",
+    "@typescript-eslint/parser": "^5.44.0",
+    "eslint": "^8.28.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-config-sanity": "^6.0.0",
     "eslint-plugin-prettier": "^4.2.1",
-    "eslint-plugin-react": "^7.31.10",
+    "eslint-plugin-react": "^7.31.11",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "parcel": "^2.8.0",
-    "prettier": "^2.7.1",
-    "react": "^17.0.0 || ^18.0.0",
+    "prettier": "^2.8.0",
+    "prettier-plugin-packagejson": "^2.3.0",
+    "react": "^18",
     "rimraf": "^3.0.2",
     "sanity": "3.0.0-rc.2",
-    "typescript": "^4.8.4"
+    "typescript": "^4.9.3"
   },
   "peerDependencies": {
-    "react": "^18.0.0",
-    "sanity": "3.0.0-rc.2"
+    "react": "^18",
+    "sanity": "dev-preview || 3.0.0-rc.2"
   },
-  "bugs": {
-    "url": "https://github.com/kaliberjs/sanity-plugin-multi-language/issues"
+  "engines": {
+    "node": ">=14"
   },
-  "homepage": "https://github.com/kaliberjs/sanity-plugin-multi-language#readme"
+  "sanityPlugin": {
+    "verifyPackage": {
+      "eslintImports": false,
+      "tsc": false
+    }
+  }
 }

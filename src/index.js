@@ -1,8 +1,10 @@
-import {createPlugin} from 'sanity'
+import {definePlugin} from 'sanity'
 import {v4 as uuid} from 'uuid'
-import {Translations} from './Translations'
+import {translations} from './Translations'
 
-export const multiLanguage = createPlugin((config = {}) => {
+export {translations}
+
+export const multiLanguage = definePlugin((config = {}) => {
   return {
     name: 'sanity-plugin-multi-language',
     schema: {
@@ -78,6 +80,3 @@ export function typeHasLanguage({schema, schemaType}) {
   )
 }
 
-export function translations(S, context, config) {
-  return S.view.component(x => <Translations {...x} {...{ config }} />).title(config?.title ?? 'Translations')
-}
