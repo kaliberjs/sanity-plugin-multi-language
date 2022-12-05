@@ -13,8 +13,9 @@ import { getCountryFromIcu } from './machinery/getCountryFromIcu'
 
 // Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
 // import { reportError } from '../../../machinery/reportError'
-// import './Translations.css'
-const styles = {}
+import styles from './Translations.module.css'
+
+console.log(styles)
 
 function reportError(e) {
   console.error(e)

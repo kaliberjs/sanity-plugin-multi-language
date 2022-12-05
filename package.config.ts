@@ -1,4 +1,5 @@
 import {defineConfig} from '@sanity/pkg-utils'
+import postcss from 'rollup-plugin-postcss'
 
 export default defineConfig({
   dist: 'lib',
@@ -13,9 +14,11 @@ export default defineConfig({
       'ae-missing-release-tag': 'off',
     },
   },
-  // rollup: {
-  //   plugins: {
-
-  //   }
-  // }
+  rollup: {
+    plugins: [
+      postcss({
+        modules: true
+      })
+    ]
+  }
 })
