@@ -8,6 +8,8 @@ export const multiLanguage = definePlugin((config = {}) => ({
   name: 'sanity-plugin-multi-language',
   schema: {
     types: prevTypes => {
+      if (!config.languages?.length) return prevTypes
+
       return prevTypes.map((schema) => {
         const schemaHasLanguage = schema.fields.some((x) => x.name === 'language')
         const schemaHasTranslationId = schema.fields.some((x) => x.name === 'translationId')
@@ -71,7 +73,7 @@ async function getParentRefLanguageHack(client) {
 }
 
 export function typeHasLanguage({schema, schemaType}) {
-  const fields = schema.get(schemaType).fields
+  const fields = schema.get(schemaType)?.fields ?? []
   return (
     fields.some((x) => x.name === 'language') && fields.some((x) => x.name === 'translationId')
   )
