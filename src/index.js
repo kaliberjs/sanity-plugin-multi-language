@@ -4,26 +4,25 @@ import {translations} from './Translations'
 
 export {translations}
 
-export const multiLanguage = definePlugin((config = {}) => {
-  return {
-    name: 'sanity-plugin-multi-language',
-    schema: {
-      types: (prevTypes, {client}) =>
-        prevTypes.map((schema) => {
-          const schemaHasLanguage = schema.fields.some((x) => x.name === 'language')
-          const schemaHasTranslationId = schema.fields.some((x) => x.name === 'translationId')
+export const multiLanguage = definePlugin((config = {}) => ({
+  name: 'sanity-plugin-multi-language',
+  schema: {
+    types: prevTypes => {
+      return prevTypes.map((schema) => {
+        const schemaHasLanguage = schema.fields.some((x) => x.name === 'language')
+        const schemaHasTranslationId = schema.fields.some((x) => x.name === 'translationId')
 
-          if (schemaHasLanguage !== schemaHasTranslationId)
-            throw new Error('A schema cannot have only one of `language` and `translationID`.')
-          if (schemaHasLanguage && schemaHasTranslationId) return schema
+        if (schemaHasLanguage !== schemaHasTranslationId)
+          throw new Error('A schema cannot have only one of `language` and `translationID`.')
+        if (schemaHasLanguage && schemaHasTranslationId) return schema
 
-          return addFieldsToSchema(schema, {config, client})
-        }),
-    },
-  }
-})
+        return addFieldsToSchema(schema, {config})
+      })
+    }
+  },
+}))
 
-function addFieldsToSchema(schema, {config, client}) {
+function addFieldsToSchema(schema, {config}) {
   const language = {
     title: 'Taal',
     name: 'language',
@@ -48,29 +47,27 @@ function addFieldsToSchema(schema, {config, client}) {
     initialValue: newInitialValue,
   }
 
-  async function newInitialValue(...args) {
+  async function newInitialValue(_, context, ...rest) {
     const result = await (typeof schema.initialValue === 'function'
-      ? schema.initialValue(...args)
+      ? schema.initialValue(_, context, ...rest)
       : schema.initialValue)
 
     return {
       ...result,
-      language: (await getParentRefLanguageHack(client)) ?? config.default,
+      language: (await getParentRefLanguageHack(context.getClient({ apiVersion: '2022-12-05' }))) ?? config.defaultLanguage,
       translationId: uuid(),
     }
   }
 }
 
-function getParentRefLanguageHack(client) {
+async function getParentRefLanguageHack(client) {
   const segments = decodeURIComponent(window.location.pathname).split(';')
-  const currentSegment = segments.slice(-1).shift()
-  const [parentId] = segments.slice(-2).shift()?.split(',')
+  const [id] = segments.slice(-1).shift()?.split(',')
 
-  return currentSegment?.includes('parentRefPath') && parentId
-    ? client.fetch(`*[_id in [$parentId, 'drafts.' + $parentId]][0].language`, {
-        parentId,
-      })
-    : null
+  return client.fetch(
+    `*[references($id)][0].language`,
+    { id }
+  )
 }
 
 export function typeHasLanguage({schema, schemaType}) {
