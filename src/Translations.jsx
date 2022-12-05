@@ -15,8 +15,6 @@ import { getCountryFromIcu } from './machinery/getCountryFromIcu'
 // import { reportError } from '../../../machinery/reportError'
 import styles from './Translations.module.css'
 
-console.log(styles)
-
 function reportError(e) {
   console.error(e)
   // TODO: report to rollbar
