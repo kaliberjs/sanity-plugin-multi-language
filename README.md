@@ -2,65 +2,105 @@
 
 Document level translations.
 
+*Heads up:* this is the Sanity v3 branch of this plugin. It was tested with `v3.0.0-rc.3`.
+
 ## Installation
 
 ```
 > yarn add @kaliber/sanity-plugin-multi-language
 ```
 
-`admin/sanity.json`
-
-```json
-{
-  "plugins": [
-    "@kaliber/sanity-plugin-multi-language",
-    ...
-  ],
-  ...
-}
-```
-
 ## Usage
 
-`admin/deskStructure.js`
+`sanity.config.js`
+
+```js
+defineConfig({
+  // ...
+
+  plugins: [
+    // ...
+    deskTool({
+      structure: deskStructure,
+      defaultDocumentNode: buildDefaultDocumentNode(config)
+    }),
+    multiLanguage(config.multiLanguage),
+  ],
+
+  // ...
+})
+```
+
+`deskStructure.js`
 
 ```js
 import { Translations, typeHasLanguage } from '@kaliber/sanity-plugin-multi-language'
 
-export function getDefaultDocumentNode({ schemaType }) {
-  return S.document().views([
-    S.view.form(),
-    ...(typeHasLanguage(schemaType) ? [S.view.component(Translations).title('Vertalingen')] : [])
-  ])
+// ...
+
+export function buildDefaultDocumentNode(config) {
+  return (S, context) => {
+    const views = [
+      S.view.form(),
+      typeHasLanguage(context) && translations(S, context, config.multiLanguage)
+    ]
+
+    return S.document().views(views.filter(Boolean))
+  }
 }
 ```
 
-`schema/documents/pagina.js`
+`schema/documents/page.js`
 
 ```js
-import { withMultipleLanguages } from '@kaliber/sanity-plugin-multi-language'
-
-export const pagina = withMultipleLanguages()({
+export const page = {
   type: 'document',
-  name: 'pagina',
-  title: 'Pagina',
-  fields: [
-    ...
-  ],
-})
+  name: 'page',
+  title: 'Page',
+  options: {
+    multiLanguage: true
+  },
+  // ...
+}
+```
+
+### Config
+_config.multiLanguage_
+```js
+{
+  defaultLanguage: 'nl',
+  languages: {
+    nl: {
+      title: 'Dutch',
+      adjective: 'dutch',
+      language: 'nl',
+      icu: 'nl_NL'
+    },
+    en: {
+      title: 'English',
+      adjective: 'english',
+      language: 'en',
+      icu: 'en_US'
+    }
+  },
+}
 ```
 
 ## Development
 
+In this plugin:
 ```
-> yarn
-> yarn link
-> yarn watch
+> yarn link-watch
 ```
 
+In your studio folder:
 ```
-admin/> yarn link @kaliber/sanity-plugin-multi-language
+> npx yalc add @kaliber/sanity-plugin-multi-language
+> npx yalc add @kaliber/sanity-plugin-multi-language --link 
+> yarn
 ```
+
+Then start your studio.
 
 ## Publish
 
