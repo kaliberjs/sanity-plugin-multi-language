@@ -1,5 +1,5 @@
 {
-  "name": "sanity-plugin-multi-language",
+  "name": "@kaliber/sanity-plugin-multi-language",
   "version": "1.0.0",
   "description": "Document level translations.",
   "keywords": [
@@ -59,7 +59,7 @@
   },
   "peerDependencies": {
     "react": "^18",
-    "sanity": "dev-preview || 3.0.0-rc.2"
+    "sanity": "3.0.0-rc.3"
   },
   "engines": {
     "node": ">=14"
