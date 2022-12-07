@@ -34,7 +34,7 @@ defineConfig({
 `deskStructure.js`
 
 ```js
-import { Translations, typeHasLanguage } from '@kaliber/sanity-plugin-multi-language'
+import { translationsView } from '@kaliber/sanity-plugin-multi-language'
 
 // ...
 
@@ -42,7 +42,7 @@ export function buildDefaultDocumentNode(config) {
   return (S, context) => {
     const views = [
       S.view.form(),
-      typeHasLanguage(context) && translations(S, context, config.multiLanguage)
+      translationsView(S, context, config.multiLanguage)
     ]
 
     return S.document().views(views.filter(Boolean))
