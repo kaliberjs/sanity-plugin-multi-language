@@ -1,9 +1,9 @@
 import {definePlugin} from 'sanity'
 import {v4 as uuid} from 'uuid'
-import {translations} from './Translations'
+import {translationsView} from './Translations'
 import {languageField} from './Language'
 
-export {translations}
+export {translationsView}
 
 export const multiLanguage = definePlugin((config = {}) => {
   const languageCount = Object.values(config.languages ?? {}).length
@@ -61,11 +61,3 @@ async function getParentRefLanguageHack(client) {
     { id }
   )
 }
-
-export function typeHasLanguage({schema, schemaType}) {
-  const fields = schema.get(schemaType)?.fields ?? []
-  return (
-    fields.some((x) => x.name === 'language') && fields.some((x) => x.name === 'translationId')
-  )
-}
-

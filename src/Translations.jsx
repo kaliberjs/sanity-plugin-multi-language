@@ -32,7 +32,8 @@ function TranslationsWithQueryClient({ document, config }) {
   )
 }
 
-export function translations(S, context, config) {
+export function translationsView(S, context, config) {
+  if (Object.values(config.languages ?? {}).length <= 1 || !typeHasLanguage(context)) return null
   return S.view.component(x => <TranslationsWithQueryClient {...x} {...{ config }} />).title(config?.title ?? 'Translations')
 }
 
@@ -548,3 +549,10 @@ function removeExcludedReferences(data, exclude) {
     : mapValues(data, x => removeExcludedReferences(x, exclude))
 }
 
+function typeHasLanguage(context) {
+  const {schema, schemaType} = context
+  const fields = schema.get(schemaType)?.fields ?? []
+  return (
+    fields.some((x) => x.name === 'language') && fields.some((x) => x.name === 'translationId')
+  )
+}
