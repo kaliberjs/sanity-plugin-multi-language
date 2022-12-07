@@ -1,66 +1,56 @@
 import {definePlugin} from 'sanity'
 import {v4 as uuid} from 'uuid'
 import {translations} from './Translations'
+import {languageField} from './Language'
 
 export {translations}
 
-export const multiLanguage = definePlugin((config = {}) => ({
-  name: 'sanity-plugin-multi-language',
-  schema: {
-    types: prevTypes => {
-      if (!config.languages?.length) return prevTypes
-
-      return prevTypes.map((schema) => {
-        const schemaHasLanguage = schema.fields.some((x) => x.name === 'language')
-        const schemaHasTranslationId = schema.fields.some((x) => x.name === 'translationId')
-
-        if (schemaHasLanguage !== schemaHasTranslationId)
-          throw new Error('A schema cannot have only one of `language` and `translationID`.')
-        if (schemaHasLanguage && schemaHasTranslationId) return schema
-
-        return addFieldsToSchema(schema, {config})
-      })
-    }
-  },
-}))
-
-function addFieldsToSchema(schema, {config}) {
-  const language = {
-    title: 'Taal',
-    name: 'language',
-    type: 'string',
-    readOnly: true,
-    // hidden: import.meta.env.NODE_ENV === 'production',
-    // inputComponent: Language
-  }
-
-  const translationId = {
-    title: 'Vertalings ID',
-    name: 'translationId',
-    type: 'string',
-    of: [{type: 'string'}],
-    readOnly: true,
-    hidden: ({currentUser}) => !currentUser.roles.some((x) => x.name === 'administrator'),
-  }
+export const multiLanguage = definePlugin((config = {}) => {
+  const languageCount = Object.values(config.languages ?? {}).length
 
   return {
-    ...schema,
-    fields: [language, translationId, ...schema.fields],
-    initialValue: newInitialValue,
+    name: 'sanity-plugin-multi-language',
+    schema: {
+      types: prevTypes => prevTypes.map(addFields)
+    },
   }
 
-  async function newInitialValue(_, context, ...rest) {
-    const result = await (typeof schema.initialValue === 'function'
-      ? schema.initialValue(_, context, ...rest)
-      : schema.initialValue)
+  function addFields(type) {
+    if (!type.options?.multiLanguage) return type
+    if (type.fields.some(x => ['language', 'translationId'].includes(x.name))) {
+      throw new Error(`Your '${type.name}' schema already contains a \`language\` or \`translationId\` field. Remove these fields before enabling multiLanguage.`)
+    }
 
     return {
-      ...result,
-      language: (await getParentRefLanguageHack(context.getClient({ apiVersion: '2022-12-05' }))) ?? config.defaultLanguage,
-      translationId: uuid(),
+      ...type,
+      fields: [
+        {
+          title: 'Taal',
+          name: 'language',
+          type: 'string',
+          readOnly: true,
+          components: {
+            field: languageField(config)
+          },
+          hidden: languageCount <= 1,
+          initialValue: async (_, context) => {
+            return (await getParentRefLanguageHack(context.getClient({ apiVersion: '2022-12-05' }))) ?? config.defaultLanguage
+          },
+        },
+        {
+          title: 'Vertalings ID',
+          name: 'translationId',
+          type: 'string',
+          of: [{type: 'string'}],
+          readOnly: true,
+          hidden: ({currentUser}) => !currentUser.roles.some((x) => x.name === 'administrator'),
+          initialValue: uuid()
+        },
+        ...type.fields ?? []
+      ]
     }
   }
-}
+})
 
 async function getParentRefLanguageHack(client) {
   const segments = decodeURIComponent(window.location.pathname).split(';')
