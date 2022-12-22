@@ -8,16 +8,17 @@
   ],
   "license": "MIT",
   "author": "Peeke Kuepers <pkuepers@kaliber.net>",
+  "type": "module",
   "exports": {
     ".": {
       "source": "./src/index.js",
       "import": "./lib/index.esm.js",
-      "require": "./lib/index.js",
+      "require": "./lib/index.cjs",
       "default": "./lib/index.esm.js"
     },
     "./package.json": "./package.json"
   },
-  "main": "./lib/index.js",
+  "main": "./lib/index.cjs",
   "module": "./lib/index.esm.js",
   "source": "./src/index.js",
   "files": [
@@ -39,23 +40,23 @@
     "@sanity/incompatible-plugin": "^1.0.4"
   },
   "devDependencies": {
-    "@sanity/pkg-utils": "^1.18.0",
-    "@sanity/plugin-kit": "^2.1.17",
-    "@typescript-eslint/eslint-plugin": "^5.44.0",
-    "@typescript-eslint/parser": "^5.44.0",
-    "eslint": "^8.28.0",
+    "@sanity/pkg-utils": "^2.0.0",
+    "@sanity/plugin-kit": "^2.2.0",
+    "@typescript-eslint/eslint-plugin": "^5.47.0",
+    "@typescript-eslint/parser": "^5.47.0",
+    "eslint": "^8.30.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-config-sanity": "^6.0.0",
     "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-react": "^7.31.11",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "prettier": "^2.8.0",
+    "prettier": "^2.8.1",
     "prettier-plugin-packagejson": "^2.3.0",
     "react": "^18",
     "rimraf": "^3.0.2",
     "rollup-plugin-postcss": "^4.0.2",
-    "sanity": "3.0.0-rc.2",
-    "typescript": "^4.9.3"
+    "sanity": "3.1.1",
+    "typescript": "^4.9.4"
   },
   "peerDependencies": {
     "react": "^18",

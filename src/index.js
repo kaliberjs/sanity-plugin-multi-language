@@ -5,17 +5,10 @@ import {languageField} from './Language'
 
 export {translations}
 
-export const multiLanguage = definePlugin((config = {}) => {
+export function addFields(config) {
   const languageCount = Object.values(config.languages ?? {}).length
 
-  return {
-    name: 'sanity-plugin-multi-language',
-    schema: {
-      types: prevTypes => prevTypes.map(addFields)
-    },
-  }
-
-  function addFields(type) {
+  return type => {
     if (!type.options?.multiLanguage) return type
     if (type.fields.some(x => ['language', 'translationId'].includes(x.name))) {
       throw new Error(`Your '${type.name}' schema already contains a \`language\` or \`translationId\` field. Remove these fields before enabling multiLanguage.`)
@@ -50,7 +43,7 @@ export const multiLanguage = definePlugin((config = {}) => {
       ]
     }
   }
-})
+}
 
 async function getParentRefLanguageHack(client) {
   const segments = decodeURIComponent(window.location.pathname).split(';')
