@@ -484,7 +484,7 @@ async function pointToTranslatedDocument(reference, language) {
 
   if (!id) throw new Error('Cannot translate reference with id ' + reference._ref)
 
-  return { ...reference, _ref: id }
+  return { ...reference, _ref: id.replace(/^drafts\./, '') }
 }
 
 function isReference(x) { return Boolean(x) && typeof x === 'object' && x._ref }
