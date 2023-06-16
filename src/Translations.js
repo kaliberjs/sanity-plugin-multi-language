@@ -428,7 +428,7 @@ async function findUntranslatedReferences({ document, language }) {
   const referenceIds = getReferences(document).map(x => x._ref)
   const references = await sanityClient.fetch(
     groq`*[_id in $ids] { title, translationId, _type, _id }`,
-    { ids: referenceIds }
+    { ids: referenceIds.flatMap(x => x.startsWith('drafts.') ? x : [x, 'drafts.' + x]) }
   )
 
   const untranslatedReferences = (
@@ -471,7 +471,7 @@ async function pointReferencesToTranslatedDocument(data, language) {
 
 async function pointToTranslatedDocument(reference, language) {
   const { _type, translationId } = await sanityClient.fetch(
-    groq`*[_id == $ref][0] { _type, translationId }`,
+    groq`*[_id == $ref || _id == 'drafts.' + $ref][0] { _type, translationId }`,
     { ref: reference._ref }
   )
 
@@ -509,7 +509,7 @@ function mapValues(o, f) {
 
 function removeExcludedReferences(data, exclude) {
   if (!data || typeof data !== 'object') return data
-  if (isReference(data) && exclude.includes(data._ref)) return
+  if (isReference(data) && exclude.map(_id => _id.replace(/^drafts\./, '')).includes(data._ref)) return
 
   return Array.isArray(data)
     ? data.map(x => removeExcludedReferences(x, exclude)).filter(Boolean)
