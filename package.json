@@ -1,6 +1,6 @@
 {
   "name": "@kaliber/sanity-plugin-multi-language",
-  "version": "2.0.0",
+  "version": "2.0.1-beta.0",
   "keywords": [
     "sanity",
     "sanity-plugin",
@@ -32,13 +32,13 @@
     "@sanity/ui": "^0.37.7"
   },
   "peerDependencies": {
-    "@sanity/base": "^2.35.2",
-    "@sanity/desk-tool": "^2.35.2",
-    "@sanity/react-hooks": "^2.35.2",
-    "country-flag-icons": "^1.5.5",
-    "groq": "^2.33.2",
+    "@sanity/base": "^2.36.2",
+    "@sanity/desk-tool": "^2.36.2",
+    "@sanity/react-hooks": "^2.36.2",
+    "country-flag-icons": "^1.5.7",
+    "groq": "^3.14.4",
     "react": "^18.2.0",
-    "react-query": "^3.39.2",
+    "react-query": "^3.39.3",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
