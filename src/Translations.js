@@ -425,10 +425,15 @@ async function createDuplicateTranslation({ original, language }) {
 }
 
 async function findUntranslatedReferences({ document, language }) {
+  // Because the referenceIds are _id's, read from their respective documents, 
+  // it's possible that they are prefixed with 'drafts.' and do not have a 
+  // published version (if they were created inline).
   const referenceIds = getReferences(document).map(x => x._ref)
+    .flatMap(x => x.startsWith('drafts.') ? x : [x, 'drafts.' + x])
+    
   const references = await sanityClient.fetch(
     groq`*[_id in $ids] { title, translationId, _type, _id }`,
-    { ids: referenceIds.flatMap(x => x.startsWith('drafts.') ? x : [x, 'drafts.' + x]) }
+    { ids: referenceIds }
   )
 
   const untranslatedReferences = (
