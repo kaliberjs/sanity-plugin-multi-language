@@ -475,16 +475,17 @@ async function pointReferencesToTranslatedDocument(data, language) {
 }
 
 async function pointToTranslatedDocument(reference, language) {
-  const { _type, translationId } = await sanityClient.fetch(
+  const doc = await sanityClient.fetch(
     groq`*[_id == $ref || _id == 'drafts.' + $ref][0] { _type, translationId }`,
     { ref: reference._ref }
   )
 
-  if (!typeHasLanguage(_type)) return reference // This document is not translatable (e.g.: images)
+  if (!doc && reference._strengthenOnPublish) return { ...reference, _ref: uuid.v4() } // This document is created inline, but doesn't have an _id yet
+  if (!typeHasLanguage(doc._type)) return reference // This document is not translatable (e.g.: images)
 
   const id = await sanityClient.fetch(
     groq`*[translationId == $translationId && language == $language][0]._id`,
-    { translationId, language }
+    { translationId: doc.translationId, language }
   )
 
   if (!id) throw new Error('Cannot translate reference with id ' + reference._ref)
