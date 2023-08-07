@@ -425,7 +425,12 @@ async function createDuplicateTranslation({ original, language }) {
 }
 
 async function findUntranslatedReferences({ document, language }) {
+  // Because the referenceIds are _id's, read from their respective documents, 
+  // it's possible that they are prefixed with 'drafts.' and do not have a 
+  // published version (if they were created inline).
   const referenceIds = getReferences(document).map(x => x._ref)
+    .flatMap(x => x.startsWith('drafts.') ? x : [x, 'drafts.' + x])
+    
   const references = await sanityClient.fetch(
     groq`*[_id in $ids] { title, translationId, _type, _id }`,
     { ids: referenceIds }
@@ -470,21 +475,22 @@ async function pointReferencesToTranslatedDocument(data, language) {
 }
 
 async function pointToTranslatedDocument(reference, language) {
-  const { _type, translationId } = await sanityClient.fetch(
-    groq`*[_id == $ref][0] { _type, translationId }`,
+  const doc = await sanityClient.fetch(
+    groq`*[_id == $ref || _id == 'drafts.' + $ref][0] { _type, translationId }`,
     { ref: reference._ref }
   )
 
-  if (!typeHasLanguage(_type)) return reference // This document is not translatable (e.g.: images)
+  if (!doc && reference._strengthenOnPublish) return { ...reference, _ref: uuid.v4() } // This document is created inline, but doesn't have an _id yet
+  if (!typeHasLanguage(doc._type)) return reference // This document is not translatable (e.g.: images)
 
   const id = await sanityClient.fetch(
     groq`*[translationId == $translationId && language == $language][0]._id`,
-    { translationId, language }
+    { translationId: doc.translationId, language }
   )
 
   if (!id) throw new Error('Cannot translate reference with id ' + reference._ref)
 
-  return { ...reference, _ref: id }
+  return { ...reference, _ref: id.replace(/^drafts\./, '') }
 }
 
 function isReference(x) { return Boolean(x) && typeof x === 'object' && x._ref }
@@ -509,7 +515,7 @@ function mapValues(o, f) {
 
 function removeExcludedReferences(data, exclude) {
   if (!data || typeof data !== 'object') return data
-  if (isReference(data) && exclude.includes(data._ref)) return
+  if (isReference(data) && exclude.map(_id => _id.replace(/^drafts\./, '')).includes(data._ref)) return
 
   return Array.isArray(data)
     ? data.map(x => removeExcludedReferences(x, exclude)).filter(Boolean)
