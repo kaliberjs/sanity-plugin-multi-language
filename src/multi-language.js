@@ -2,11 +2,11 @@ import * as uuid from 'uuid'
 import pluginConfig from 'config:@kaliber/sanity-plugin-multi-language'
 import { Language } from './Language'
 import client from 'part:@sanity/base/client'
-export { Translations, typeHasLanguage } from './Translations'
+export { Translations, typeHasLanguage, CustomizableTranslations } from './Translations'
 
 const sanityClient = client.withConfig({ apiVersion: '2022-03-16' })
 
-export function withMultipleLanguages({ fieldset = undefined } = {}) {
+export function withMultipleLanguages({ getDefaultLanguage = undefined, fieldset = undefined } = {}) {
   return schema => {
     const schemaHasLanguage = schema.fields.some(x => x.name === 'language')
     const schemaHasTranslationId = schema.fields.some(x => x.name === 'translationId')
@@ -14,11 +14,11 @@ export function withMultipleLanguages({ fieldset = undefined } = {}) {
     if (schemaHasLanguage !== schemaHasTranslationId) throw new Error('A schema cannot have only one of `language` and `translationID`.')
     if (schemaHasLanguage && schemaHasTranslationId) return schema
 
-    return addFieldsToSchema(schema, { fieldset })
+    return addFieldsToSchema(schema, { fieldset, getDefaultLanguage })
   }
 }
 
-function addFieldsToSchema(schema, { fieldset }) {
+function addFieldsToSchema(schema, { fieldset, getDefaultLanguage }) {
   const language = {
     title: 'Taal',
     name: 'language',
@@ -57,7 +57,10 @@ function addFieldsToSchema(schema, { fieldset }) {
 
     return {
       ...result,
-      language: (await getParentRefLanguageHack()) ?? pluginConfig.defaultLanguage,
+      // language: (await getParentRefLanguageHack()) ?? pluginConfig.defaultLanguage,
+      language: 
+      getDefaultLanguage ? (await getDefaultLanguage({sanityClient})) : 
+      ((await getParentRefLanguageHack()) ?? pluginConfig.defaultLanguage),
       translationId: uuid.v4()
     }
   }
