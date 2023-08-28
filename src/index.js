@@ -1,9 +1,9 @@
-import {v4 as uuid} from 'uuid'
-import {translations, Translations} from './Translations'
-import {languageField} from './Language'
+import { v4 as uuid } from 'uuid'
+import { Translations } from './Translations'
+import { languageField } from './Language'
 
-export { translations }
 export { Translations }
+
 export function addFields(config) {
   const languageCount = Object.values(config.languages ?? {}).length
 
@@ -33,9 +33,9 @@ export function addFields(config) {
           title: 'Vertalings ID',
           name: 'translationId',
           type: 'string',
-          of: [{type: 'string'}],
+          of: [{ type: 'string' }],
           readOnly: true,
-          hidden: ({currentUser}) => !currentUser.roles.some((x) => x.name === 'administrator'),
+          hidden: ({ currentUser }) => !currentUser.roles.some((x) => x.name === 'administrator'),
           initialValue: uuid()
         },
         ...type.fields ?? []
