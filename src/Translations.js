@@ -13,7 +13,9 @@ import { getCountryFromIcu } from './machinery/getCountryFromIcu'
 
 // Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
 // import { reportError } from '../../../machinery/reportError'
-import styles from './Translations.module.css'
+import styles from './Translations.css'
+
+export { TranslationsWithQueryClient as Translations }
 
 function reportError(e) {
   console.error(e)
@@ -21,8 +23,6 @@ function reportError(e) {
 }
 
 const queryClient = new QueryClient()
-
-export { TranslationsWithQueryClient as Translations }
 
 function TranslationsWithQueryClient({ document, config }) {
   return (
@@ -32,18 +32,14 @@ function TranslationsWithQueryClient({ document, config }) {
   )
 }
 
-export function translations(S, context, config) {
-  return S.view.component(x => <TranslationsWithQueryClient {...x} {...{ config }} />).title(config?.title ?? 'Translations')
-}
-
 function Translations({ document: { displayed: document, draft, published }, config }) {
   const schema = useSchema()
-  const client = useClient()
+  const client = useClient({ apiVersion: '2023-08-28' })
   const schemaType = schema.get(document._type)
   const [modal, setModal] = React.useState(null)
   const queryClient = useQueryClient()
   const { data, isLoading, isSuccess, isError } = useQuery({
-    queryKey: ['translations', { document }],
+    queryKey: ['translations', { document, client }],
     queryFn: getTranslations,
     onError: handleQueryError
   })
@@ -114,10 +110,10 @@ function Translations({ document: { displayed: document, draft, published }, con
                 languages={config.languages}
                 {...{ translations, schemaType }}
                 onTranslateFresh={language => {
-                  addFreshTranslationMutation.mutate({ original: document, language })
+                  addFreshTranslationMutation.mutate({ client, original: document, language })
                 }}
                 onTranslateDuplicate={language => {
-                  addDuplicateTranslationMutation.mutate({ original: document, language })
+                  addDuplicateTranslationMutation.mutate({ client, original: document, language })
                 }}
               />
             : <Text>It seems there isn't anything to translate yet!</Text>
@@ -129,7 +125,7 @@ function Translations({ document: { displayed: document, draft, published }, con
           documents={modal.references}
           onClose={() => setModal(null)}
           onContinue={() => {
-            addDuplicateTranslationsWithoutReferencesMutation.mutate({ original: modal.cleanDuplicate, language: modal.language })
+            addDuplicateTranslationsWithoutReferencesMutation.mutate({ client, original: modal.cleanDuplicate, language: modal.language })
           }}
         />
       )}
@@ -159,153 +155,6 @@ function Translations({ document: { displayed: document, draft, published }, con
 
   function closeChildPanes() {
     router.navigate({ panes: paneRouter.routerPanesState.slice(0, paneRouter.groupIndex + 1) })
-  }
-
-  async function getTranslations(context) {
-    const { queryKey: [, { document }] } = context
-    if (!document) return null
-
-    const { translationId } = document
-
-    if (!translationId) return null
-
-    const translations = await client.fetch(
-      groq`*[translationId == $translationId]`,
-      { translationId }
-    )
-
-    return translations.reduce(
-      (result, translation) => {
-        const language = translation.language ?? config.defaultLanguage
-        return { ...result, [language]: translation }
-      },
-      {}
-    )
-  }
-
-  async function addFreshTranslation({ original, language }) {
-    const duplicateId = 'drafts.' + uuid.v5([language, original._id].join('.'), uuid.v5.URL)
-
-    const result = await client.create({
-      _type: original._type, _id: duplicateId, translationId: original.translationId, language
-    })
-
-    return { status: 'success', data: result }
-  }
-
-  async function translateFresh({ original, language }) {
-    const { status, data } = await addFreshTranslation({ original, language })
-    if (status === 'success') return { status, data }
-    throw new Error(`Failed to create fresh translation (${status})`)
-  }
-
-  async function translateDuplicate({ original, language }) {
-    const { status, data } = await addDuplicatedTranslation({ original, language })
-    if (['success', 'untranslatedReferencesFound'].includes(status)) return { status, data }
-    throw new Error(`Failed to create duplicate translation (${status})`)
-  }
-
-  async function translateDuplicateWithoutReferences({ original, language }) {
-    const { status, data } = await addDuplicatedTranslation({ original, language })
-    if (status === 'success') return { status, data }
-    throw new Error(`Failed to create duplicate translation without references (${status})`)
-  }
-
-  async function addDuplicatedTranslation({ original, language }) {
-    const untranslatedReferences = await findUntranslatedReferences({ document: original, language })
-
-    if (untranslatedReferences.length) return untranslatedReferencesFound(untranslatedReferences)
-
-    return {
-      status: 'success',
-      data: await createDuplicateTranslation({ original, language })
-    }
-
-    async function untranslatedReferencesFound(untranslatedReferences) {
-      const duplicate = removeExcludedReferences(original, untranslatedReferences.map(x => x._id))
-
-      return {
-        status: 'untranslatedReferencesFound',
-        data: {
-          references: untranslatedReferences,
-          cleanDuplicate: duplicate,
-          language
-        }
-      }
-    }
-  }
-
-  async function createDuplicateTranslation({ original, language }) {
-    const { _id, _createdAt, _rev, _updatedAt, ...document } = original
-    const { translationId } = document
-
-    const [, duplicate] = await Promise.all([
-      client.patch(_id).setIfMissing({ translationId }).commit(), // TODO: kan dit echt gebeuren?
-      client.create({
-        ...(await pointReferencesToTranslatedDocument(document, language)),
-        _id: 'drafts.' + uuid.v5([language, original._id].join('.'), uuid.v5.URL),
-        translationId,
-        language
-      })
-    ])
-
-    return duplicate
-  }
-
-  async function findUntranslatedReferences({ document, language }) {
-    const referenceIds = getReferences(document).map(x => x._ref)
-    const references = await client.fetch(
-      groq`*[_id in $ids] { title, translationId, _type, _id }`,
-      { ids: referenceIds }
-    )
-
-    const untranslatedReferences = (
-      await Promise.all(
-        references
-          .filter(x => x.language && x.translationId)
-          .map(async x => {
-            const count = await client.fetch(
-              groq`count(*[translationId == $translationId && language == $language])`,
-              { translationId: x.translationId, language }
-            )
-
-            return count > 0 ? null : x
-          })
-      )
-    ).filter(Boolean)
-
-    return untranslatedReferences
-  }
-
-  async function pointReferencesToTranslatedDocument(data, language) {
-    if (!data || typeof data !== 'object') return data
-    if (isReference(data)) return pointToTranslatedDocument(data, language)
-
-    if (Array.isArray(data))
-      return Promise.all(data.map(x => pointReferencesToTranslatedDocument(x, language)))
-
-    return sequentialMapValuesAsync(
-      data,
-      async value => pointReferencesToTranslatedDocument(value, language)
-    )
-  }
-
-  async function pointToTranslatedDocument(reference, language) {
-    const { translationId } = await client.fetch(
-      groq`*[_id == $ref][0] { _type, translationId }`,
-      { ref: reference._ref }
-    )
-
-    if (!(document.language && document.translationId)) return reference // This document is not translatable (e.g.: images)
-
-    const id = await client.fetch(
-      groq`*[translationId == $translationId && language == $language][0]._id`,
-      { translationId, language }
-    )
-
-    if (!id) throw new Error('Cannot translate reference with id ' + reference._ref)
-
-    return { ...reference, _ref: id }
   }
 }
 
@@ -512,11 +361,164 @@ function useOnChildDocumentDeletedHack(onDelete) {
   )
 }
 
+async function getTranslations(context) {
+  const { queryKey: [, { document, client }] } = context
+  if (!document) return null
+
+  const { translationId } = document
+
+  if (!translationId) return null
+
+  const translations = await client.fetch(
+    groq`*[translationId == $translationId]`,
+    { translationId }
+  )
+
+  return translations.reduce(
+    (result, translation) => {
+      const language = translation.language ?? config.defaultLanguage
+      return { ...result, [language]: translation }
+    },
+    {}
+  )
+}
+
+async function addFreshTranslation({ client, original, language }) {
+  const duplicateId = 'drafts.' + uuid.v4()
+
+  const result = await client.create({
+    _type: original._type, _id: duplicateId, translationId: original.translationId, language
+  })
+
+  return { status: 'success', data: result }
+}
+
+async function translateFresh({ client, original, language }) {
+  const { status, data } = await addFreshTranslation({ client, original, language })
+  if (status === 'success') return { status, data }
+  throw new Error(`Failed to create fresh translation (${status})`)
+}
+
+async function translateDuplicate({ client, original, language }) {
+  const { status, data } = await addDuplicatedTranslation({ client, original, language })
+  if (['success', 'untranslatedReferencesFound'].includes(status)) return { status, data }
+  throw new Error(`Failed to create duplicate translation (${status})`)
+}
+
+async function translateDuplicateWithoutReferences({ client, original, language }) {
+  const { status, data } = await addDuplicatedTranslation({ client, original, language })
+  if (status === 'success') return { status, data }
+  throw new Error(`Failed to create duplicate translation without references (${status})`)
+}
+
+async function addDuplicatedTranslation({ client, original, language }) {
+  const untranslatedReferences = await findUntranslatedReferences({ client, document: original, language })
+
+  if (untranslatedReferences.length) return untranslatedReferencesFound(untranslatedReferences)
+
+  return {
+    status: 'success',
+    data: await createDuplicateTranslation({ client, original, language })
+  }
+
+  async function untranslatedReferencesFound(untranslatedReferences) {
+    const duplicate = removeExcludedReferences(original, untranslatedReferences.map(x => x._id))
+
+    return {
+      status: 'untranslatedReferencesFound',
+      data: {
+        references: untranslatedReferences,
+        cleanDuplicate: duplicate,
+        language
+      }
+    }
+  }
+}
+
+async function createDuplicateTranslation({ client, original, language }) {
+  const { _id, _createdAt, _rev, _updatedAt, ...document } = original
+  const { translationId } = document
+
+  const [, duplicate] = await Promise.all([
+    client.patch(_id).setIfMissing({ translationId }).commit(), // TODO: kan dit echt gebeuren?
+    client.create({
+      ...(await pointReferencesToTranslatedDocument(client, document, language)),
+      _id: 'drafts.' + uuid.v4(),
+      translationId,
+      language
+    })
+  ])
+
+  return duplicate
+}
+
+async function findUntranslatedReferences({ client, document, language }) {
+  // Because the referenceIds are _id's, read from their respective documents,
+  // it's possible that they are prefixed with 'drafts.' and do not have a
+  // published version (if they were created inline).
+  const referenceIds = getReferences(document).map(x => x._ref)
+    .flatMap(x => x.startsWith('drafts.') ? x : [x, 'drafts.' + x])
+
+  const references = await client.fetch(
+    groq`*[_id in $ids] { title, translationId, _type, _id }`,
+    { ids: referenceIds }
+  )
+
+  const untranslatedReferences = (
+    await Promise.all(
+      references
+        .filter(x => typeHasLanguage(x._type))
+        .map(async x => {
+          const count = await client.fetch(
+            groq`count(*[translationId == $translationId && language == $language])`,
+            { translationId: x.translationId, language }
+          )
+
+          return count > 0 ? null : x
+        })
+    )
+  ).filter(Boolean)
+
+  return untranslatedReferences
+}
+
 function getReferences(data) {
   if (!data || typeof data !== 'object') return []
   if (isReference(data)) return [data]
 
   return Object.values(data).flatMap(getReferences)
+}
+
+async function pointReferencesToTranslatedDocument(client, data, language) {
+  if (!data || typeof data !== 'object') return data
+  if (isReference(data)) return pointToTranslatedDocument(client, data, language)
+
+  if (Array.isArray(data))
+    return Promise.all(data.map(x => pointReferencesToTranslatedDocument(client, x, language)))
+
+  return sequentialMapValuesAsync(
+    data,
+    async value => pointReferencesToTranslatedDocument(client, value, language)
+  )
+}
+
+async function pointToTranslatedDocument(client, reference, language) {
+  const doc = await client.fetch(
+    groq`*[_id == $ref || _id == 'drafts.' + $ref][0] { _type, translationId }`,
+    { ref: reference._ref }
+  )
+
+  if (!doc && reference._strengthenOnPublish) return { ...reference, _ref: uuid.v4() } // This document is created inline, but doesn't have an _id yet
+  if (!typeHasLanguage(doc._type)) return reference // This document is not translatable (e.g.: images)
+
+  const id = await client.fetch(
+    groq`*[translationId == $translationId && language == $language][0]._id`,
+    { translationId: doc.translationId, language }
+  )
+
+  if (!id) throw new Error('Cannot translate reference with id ' + reference._ref)
+
+  return { ...reference, _ref: id.replace(/^drafts\./, '') }
 }
 
 function isReference(x) { return Boolean(x) && typeof x === 'object' && x._ref }
@@ -541,10 +543,9 @@ function mapValues(o, f) {
 
 function removeExcludedReferences(data, exclude) {
   if (!data || typeof data !== 'object') return data
-  if (isReference(data) && exclude.includes(data._ref)) return
+  if (isReference(data) && exclude.map(_id => _id.replace(/^drafts\./, '')).includes(data._ref)) return
 
   return Array.isArray(data)
     ? data.map(x => removeExcludedReferences(x, exclude)).filter(Boolean)
     : mapValues(data, x => removeExcludedReferences(x, exclude))
 }
-

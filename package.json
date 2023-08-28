@@ -1,74 +1,40 @@
 {
   "name": "@kaliber/sanity-plugin-multi-language",
-  "version": "1.0.0",
+  "version": "2.0.1",
   "description": "Document level translations.",
   "keywords": [
     "sanity",
-    "sanity-plugin"
+    "sanity-plugin",
+    "multi-language"
   ],
   "license": "MIT",
-  "author": "Peeke Kuepers <pkuepers@kaliber.net>",
-  "type": "module",
-  "exports": {
-    ".": {
-      "source": "./src/index.js",
-      "import": "./lib/index.esm.js",
-      "require": "./lib/index.cjs",
-      "default": "./lib/index.esm.js"
-    },
-    "./package.json": "./package.json"
-  },
-  "main": "./lib/index.cjs",
-  "module": "./lib/index.esm.js",
-  "source": "./src/index.js",
+  "main": "src/index.js",
   "files": [
-    "src",
-    "lib",
-    "v2-incompatible.js",
-    "sanity.json"
+    "src/**",
+    "sanity.json",
+    "LICENCE",
+    "package.json",
+    "readme.md",
+    "v2-incompatible.js"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "prebuild": "npm run clean && plugin-kit verify-package --silent && pkg-utils",
-    "build": "pkg-utils build",
-    "clean": "rimraf lib",
-    "link-watch": "plugin-kit link-watch",
-    "lint": "eslint .",
-    "prepublishOnly": "npm run build",
-    "watch": "pkg-utils watch"
+    "prepare": "[ -f scripts/addPeerDependencies.js ] && node scripts/addPeerDependencies.js"
   },
   "dependencies": {
-    "@sanity/incompatible-plugin": "^1.0.4"
-  },
-  "devDependencies": {
-    "@sanity/pkg-utils": "^2.0.0",
-    "@sanity/plugin-kit": "^2.2.0",
-    "@typescript-eslint/eslint-plugin": "^5.47.0",
-    "@typescript-eslint/parser": "^5.47.0",
-    "eslint": "^8.30.0",
-    "eslint-config-prettier": "^8.5.0",
-    "eslint-config-sanity": "^6.0.0",
-    "eslint-plugin-prettier": "^4.2.1",
-    "eslint-plugin-react": "^7.31.11",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "prettier": "^2.8.1",
-    "prettier-plugin-packagejson": "^2.3.0",
-    "react": "^18",
-    "rimraf": "^3.0.2",
-    "rollup-plugin-postcss": "^4.0.2",
-    "sanity": "3.1.1",
-    "typescript": "^4.9.4"
+    "@sanity/icons": "^2.4.1",
+    "@sanity/incompatible-plugin": "^1.0.4",
+    "@sanity/ui": "^1.7.4"
   },
   "peerDependencies": {
-    "react": "^18",
-    "sanity": "3.0.0-rc.3"
-  },
-  "engines": {
-    "node": ">=14"
-  },
-  "sanityPlugin": {
-    "verifyPackage": {
-      "eslintImports": false,
-      "tsc": false
-    }
+    "country-flag-icons": "^1.5.7",
+    "groq": "^3.15.1",
+    "react": "^18.2.0",
+    "react-query": "^3.39.3",
+    "sanity": "^3.15.1",
+    "styled-components": "^6.0.7",
+    "uuid": "^9.0.0"
   }
 }
