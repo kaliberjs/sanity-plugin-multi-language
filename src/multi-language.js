@@ -57,7 +57,6 @@ function addFieldsToSchema(schema, { fieldset, getDefaultLanguage }) {
 
     return {
       ...result,
-      // language: (await getParentRefLanguageHack()) ?? pluginConfig.defaultLanguage,
       language: 
       getDefaultLanguage ? (await getDefaultLanguage({sanityClient})) : 
       ((await getParentRefLanguageHack()) ?? pluginConfig.defaultLanguage),
