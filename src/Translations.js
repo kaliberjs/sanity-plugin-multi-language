@@ -9,7 +9,7 @@ import { Container, Stack, Flex, Box, Inline, Card, Dialog, Grid, Text, Spinner,
 import { DocumentsIcon, ComposeIcon, EditIcon, PublishIcon } from '@sanity/icons'
 import { Flag } from './Flag'
 import { getCountryFromIcu } from './machinery/getCountryFromIcu'
-
+import { typeHasLanguage } from './index'
 
 // Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
 // import { reportError } from '../../../machinery/reportError'
@@ -113,7 +113,7 @@ function Translations({ document: { displayed: document, draft, published }, con
                   addFreshTranslationMutation.mutate({ client, original: document, language })
                 }}
                 onTranslateDuplicate={language => {
-                  addDuplicateTranslationMutation.mutate({ client, original: document, language })
+                  addDuplicateTranslationMutation.mutate({ client, original: document, language, schema })
                 }}
               />
             : <Text>It seems there isn't anything to translate yet!</Text>
@@ -125,7 +125,7 @@ function Translations({ document: { displayed: document, draft, published }, con
           documents={modal.references}
           onClose={() => setModal(null)}
           onContinue={() => {
-            addDuplicateTranslationsWithoutReferencesMutation.mutate({ client, original: modal.cleanDuplicate, language: modal.language })
+            addDuplicateTranslationsWithoutReferencesMutation.mutate({ client, original: modal.cleanDuplicate, language: modal.language, schema })
           }}
         />
       )}
@@ -399,26 +399,26 @@ async function translateFresh({ client, original, language }) {
   throw new Error(`Failed to create fresh translation (${status})`)
 }
 
-async function translateDuplicate({ client, original, language }) {
-  const { status, data } = await addDuplicatedTranslation({ client, original, language })
+async function translateDuplicate({ client, original, language, schema }) {
+  const { status, data } = await addDuplicatedTranslation({ client, original, language, schema })
   if (['success', 'untranslatedReferencesFound'].includes(status)) return { status, data }
   throw new Error(`Failed to create duplicate translation (${status})`)
 }
 
-async function translateDuplicateWithoutReferences({ client, original, language }) {
-  const { status, data } = await addDuplicatedTranslation({ client, original, language })
+async function translateDuplicateWithoutReferences({ client, original, language, schema }) {
+  const { status, data } = await addDuplicatedTranslation({ client, original, language, schema })
   if (status === 'success') return { status, data }
   throw new Error(`Failed to create duplicate translation without references (${status})`)
 }
 
-async function addDuplicatedTranslation({ client, original, language }) {
-  const untranslatedReferences = await findUntranslatedReferences({ client, document: original, language })
+async function addDuplicatedTranslation({ client, original, language, schema }) {
+  const untranslatedReferences = await findUntranslatedReferences({ client, document: original, language, schema })
 
   if (untranslatedReferences.length) return untranslatedReferencesFound(untranslatedReferences)
 
   return {
     status: 'success',
-    data: await createDuplicateTranslation({ client, original, language })
+    data: await createDuplicateTranslation({ client, original, language, schema })
   }
 
   async function untranslatedReferencesFound(untranslatedReferences) {
@@ -435,14 +435,14 @@ async function addDuplicatedTranslation({ client, original, language }) {
   }
 }
 
-async function createDuplicateTranslation({ client, original, language }) {
+async function createDuplicateTranslation({ client, original, language, schema }) {
   const { _id, _createdAt, _rev, _updatedAt, ...document } = original
   const { translationId } = document
 
   const [, duplicate] = await Promise.all([
     client.patch(_id).setIfMissing({ translationId }).commit(), // TODO: kan dit echt gebeuren?
     client.create({
-      ...(await pointReferencesToTranslatedDocument(client, document, language)),
+      ...(await pointReferencesToTranslatedDocument(client, document, language, schema)),
       _id: 'drafts.' + uuid.v4(),
       translationId,
       language
@@ -452,7 +452,7 @@ async function createDuplicateTranslation({ client, original, language }) {
   return duplicate
 }
 
-async function findUntranslatedReferences({ client, document, language }) {
+async function findUntranslatedReferences({ client, document, language, schema }) {
   // Because the referenceIds are _id's, read from their respective documents,
   // it's possible that they are prefixed with 'drafts.' and do not have a
   // published version (if they were created inline).
@@ -467,7 +467,7 @@ async function findUntranslatedReferences({ client, document, language }) {
   const untranslatedReferences = (
     await Promise.all(
       references
-        .filter(x => typeHasLanguage(x._type))
+        .filter(x => typeHasLanguage({ schema, schemaType: x._type }))
         .map(async x => {
           const count = await client.fetch(
             groq`count(*[translationId == $translationId && language == $language])`,
@@ -489,27 +489,27 @@ function getReferences(data) {
   return Object.values(data).flatMap(getReferences)
 }
 
-async function pointReferencesToTranslatedDocument(client, data, language) {
+async function pointReferencesToTranslatedDocument(client, data, language, schema) {
   if (!data || typeof data !== 'object') return data
-  if (isReference(data)) return pointToTranslatedDocument(client, data, language)
+  if (isReference(data)) return pointToTranslatedDocument(client, data, language, schema)
 
   if (Array.isArray(data))
-    return Promise.all(data.map(x => pointReferencesToTranslatedDocument(client, x, language)))
+    return Promise.all(data.map(x => pointReferencesToTranslatedDocument(client, x, language, schema)))
 
   return sequentialMapValuesAsync(
     data,
-    async value => pointReferencesToTranslatedDocument(client, value, language)
+    async value => pointReferencesToTranslatedDocument(client, value, language, schema)
   )
 }
 
-async function pointToTranslatedDocument(client, reference, language) {
+async function pointToTranslatedDocument(client, reference, language, schema) {
   const doc = await client.fetch(
     groq`*[_id == $ref || _id == 'drafts.' + $ref][0] { _type, translationId }`,
     { ref: reference._ref }
   )
 
   if (!doc && reference._strengthenOnPublish) return { ...reference, _ref: uuid.v4() } // This document is created inline, but doesn't have an _id yet
-  if (!typeHasLanguage(doc._type)) return reference // This document is not translatable (e.g.: images)
+  if (!typeHasLanguage({ schema, schemaType: doc._type })) return reference // This document is not translatable (e.g.: images)
 
   const id = await client.fetch(
     groq`*[translationId == $translationId && language == $language][0]._id`,
