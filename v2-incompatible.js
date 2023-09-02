@@ -1,11 +1,10 @@
-const {showIncompatiblePluginDialog} = require('@sanity/incompatible-plugin')
-const {name, version, sanityExchangeUrl} = require('./package.json')
+const { showIncompatiblePluginDialog } = require('@sanity/incompatible-plugin')
+const { name, version } = require('./package.json')
 
 export default showIncompatiblePluginDialog({
-  name: name,
+  name,
   versions: {
     v3: version,
     v2: undefined,
   },
-  sanityExchangeUrl,
 })

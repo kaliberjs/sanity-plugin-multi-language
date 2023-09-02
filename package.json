@@ -24,11 +24,11 @@
     "prepare": "[ -f scripts/addPeerDependencies.js ] && node scripts/addPeerDependencies.js"
   },
   "dependencies": {
-    "@sanity/icons": "^2.4.1",
-    "@sanity/incompatible-plugin": "^1.0.4",
-    "@sanity/ui": "^1.7.4"
+    "@sanity/incompatible-plugin": "^1.0.4"
   },
   "peerDependencies": {
+    "@sanity/icons": "^2.4.1",
+    "@sanity/ui": "^1.7.4",
     "country-flag-icons": "^1.5.7",
     "groq": "^3.15.1",
     "react": "^18.2.0",

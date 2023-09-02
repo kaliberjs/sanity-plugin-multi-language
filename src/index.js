@@ -26,6 +26,7 @@ export function addFields(config) {
           },
           hidden: languageCount <= 1,
           initialValue: async (_, context) => {
+            // TODO is there another way in V3 to obtain the parent document?
             return (await getParentRefLanguageHack(context.getClient({ apiVersion: '2022-12-05' }))) ?? config.defaultLanguage
           },
         },
