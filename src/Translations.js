@@ -487,7 +487,7 @@ async function createDuplicateTranslation({ client, original, language, schema }
   const [, duplicate] = await Promise.all([
     client.patch(_id).setIfMissing({ translationId }).commit(), // TODO: kan dit echt gebeuren? misschien als we van untranslated naar translated zouden gaan, is denk ik niet de bedoeling
     client.create({
-      ...(await cloneAndPointReferencesToTranslatedDocument(client, document, language, schema)),
+      ...(await cloneAndPointReferencesToTranslatedDocument(document, language, { client, schema })),
       _id: 'drafts.' + uuid.v4(),
       translationId,
       language
@@ -534,23 +534,23 @@ function getReferences(data) {
   return Object.values(data).flatMap(getReferences)
 }
 
-async function cloneAndPointReferencesToTranslatedDocument(client, data, language, schema) {
+async function cloneAndPointReferencesToTranslatedDocument(data, language, { client, schema }) {
   if (!data || typeof data !== 'object') 
     return data
 
   if (isReference(data)) 
-    return pointToTranslatedDocument(client, data, language, schema)
+    return pointToTranslatedDocument(data, language, { client, schema })
   
   if (Array.isArray(data))
-    return Promise.all(data.map(x => cloneAndPointReferencesToTranslatedDocument(client, x, language, schema)))
+    return Promise.all(data.map(x => cloneAndPointReferencesToTranslatedDocument(x, language, { client, schema })))
 
   return mapValuesAsync(
     data,
-    async value => cloneAndPointReferencesToTranslatedDocument(client, value, language, schema)
+    async value => cloneAndPointReferencesToTranslatedDocument(value, language, { client, schema })
   )
 }
 
-async function pointToTranslatedDocument(client, reference, language, schema) {
+async function pointToTranslatedDocument(reference, language, { client, schema }) {
   const doc = await client.fetch(
     groq`*[_id == $ref || _id == 'drafts.' + $ref][0] { _type, translationId }`,
     { ref: reference._ref }
