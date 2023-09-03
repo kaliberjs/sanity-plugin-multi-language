@@ -1,8 +1,8 @@
 import React from 'react'
-import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from 'react-query'
+import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from 'react-query'
 import * as uuid from 'uuid'
 import groq from 'groq'
-import { useEditState, useSchema, useClient, Preview as SanityPreview } from 'sanity'
+import { useEditState, useSchema, useClient, Preview as SanityPreview, SanityClient } from 'sanity'
 import { useRouter } from 'sanity/router'
 import { usePaneRouter } from 'sanity/desk'
 import { Container, Stack, Flex, Box, Inline, Card, Dialog, Grid, Text, Spinner, Button, Tooltip } from '@sanity/ui'
@@ -14,6 +14,10 @@ import { typeHasLanguage } from './index'
 // Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
 // import { reportError } from '../../../machinery/reportError'
 import styles from './Translations.css'
+
+const apiVersion = '2023-08-28'
+
+/** @typedef {{ references: any, cleanDuplicate: any, language: string }} UntranslatedReferenceInfo */
 
 export { TranslationsWithQueryClient as Translations }
 
@@ -32,48 +36,41 @@ function TranslationsWithQueryClient({ document, config }) {
   )
 }
 
+
 function Translations({ document: { displayed: document, draft, published }, config }) {
-  const schema = useSchema()
-  const client = useClient({ apiVersion: '2023-08-28' })
-  const schemaType = schema.get(document._type)
-  const [modal, setModal] = React.useState(null)
-  const queryClient = useQueryClient()
-  const { data, isLoading, isSuccess, isError } = useQuery({
-    queryKey: ['translations', { document, client }],
-    queryFn: getTranslations,
-    onError: handleQueryError
+  const translationId = document?.translationId
+
+  const { translations, isLoading, isSuccess, isError, reloadTranslations } = 
+    useTranslations(translationId, config)
+  
+  const [untranslatedReferenceInfo, setUntranslatedReferenceInfo] = 
+    React.useState(/** @type {UntranslatedReferenceInfo | null} */ (null))
+  
+  const navigateToDocument = useNavigateToDocument()
+  
+  const {
+    addFreshTranslation,
+    addDuplicateTranslation,
+    addDuplicateTranslationsWithoutReferences,
+  } = useTranslationHandling({
+    onTranslationCreated(document) {
+      reloadTranslations()
+      navigateToDocument(document)  
+    }, 
+    onUntranslatedReferencesFound(untranslatedReferenceInfo) {
+      setUntranslatedReferenceInfo(untranslatedReferenceInfo)
+    }, 
+    onError(e) {
+      reportError(e)
+      alert('Something went wrong, please try again')
+    },
   })
-  const translations = data ?? []
-  const paneRouter = usePaneRouter()
-  const router = useRouter()
+  
+  const closeChildPanes = useCloseChildPanes()
 
   useOnChildDocumentDeletedHack(() => {
     closeChildPanes()
-    queryClient.invalidateQueries(['translations'])
-  })
-
-  // TODO: Show toast on error
-
-  const addFreshTranslationMutation = useMutation({
-    mutationFn: translateFresh,
-    onSuccess: handleTranslationCreated,
-    onError: handleQueryError
-  })
-
-  const addDuplicateTranslationMutation = useMutation({
-    mutationFn: translateDuplicate,
-    onSuccess({ status, data }) {
-      if (status === 'success') handleTranslationCreated({ data })
-      else if (status === 'untranslatedReferencesFound') showUntranslatedReferences(data)
-    },
-    onError: handleQueryError
-  })
-
-  const addDuplicateTranslationsWithoutReferencesMutation = useMutation({
-    mutationFn: translateDuplicateWithoutReferences,
-    onSuccess: handleTranslationCreated,
-    onError: handleQueryError,
-    onSettled() { setModal(null) },
+    reloadTranslations()
   })
 
   return (
@@ -108,52 +105,121 @@ function Translations({ document: { displayed: document, draft, published }, con
             ? <Languages
                 original={document}
                 languages={config.languages}
-                {...{ translations, schemaType }}
+                {...{ translations }}
                 onTranslateFresh={language => {
-                  addFreshTranslationMutation.mutate({ client, original: document, language })
+                  addFreshTranslation(document, language)
                 }}
                 onTranslateDuplicate={language => {
-                  addDuplicateTranslationMutation.mutate({ client, original: document, language, schema })
+                  addDuplicateTranslation(document, language)
                 }}
               />
             : <Text>It seems there isn't anything to translate yet!</Text>
         )}
       </Stack>
 
-      {modal && (
+      {untranslatedReferenceInfo && (
         <MissingTranslationsDialog
-          documents={modal.references}
-          onClose={() => setModal(null)}
-          onContinue={() => {
-            addDuplicateTranslationsWithoutReferencesMutation.mutate({ client, original: modal.cleanDuplicate, language: modal.language, schema })
+          documents={untranslatedReferenceInfo.references}
+          onClose={() => setUntranslatedReferenceInfo(null)}
+          onContinue={async () => {
+            await addDuplicateTranslationsWithoutReferences(
+              untranslatedReferenceInfo.cleanDuplicate,
+              untranslatedReferenceInfo.language,
+            )
+            setUntranslatedReferenceInfo(null)
           }}
         />
       )}
     </Container>
   )
+}
 
-  function handleTranslationCreated({ data }) {
-    queryClient.invalidateQueries(['translations'])
+function useNavigateToDocument() {
+  const paneRouter = usePaneRouter()
+  const router = useRouter()
 
+  return document => {
     router.navigate({
       panes: [
         ...paneRouter.routerPanesState,
-        [{ id: data._id, params: { type: data._type } }],
+        [{ id: document._id, params: { type: document._type } }],
       ]
     })
   }
+}
 
-  function showUntranslatedReferences(data) {
-    const { references, cleanDuplicate, language } = data
-    setModal({ references, cleanDuplicate, language })
+function useTranslationHandling({ onTranslationCreated, onUntranslatedReferencesFound, onError }) {
+  const client = useClient({ apiVersion })
+  const schema = useSchema()
+
+  return {
+    async addFreshTranslation(document, language) {
+      await withErrorHandling(async () => {
+        const { data } = await translateFresh({ client, original: document, language })
+        onTranslationCreated(data)
+      })
+    },
+    async addDuplicateTranslation(document, language) {
+      await withErrorHandling(async () => {
+        const { status, data } = await translateDuplicate({ client, original: document, language, schema })
+        if (status === 'success') onTranslationCreated(data)
+        else if (status === 'untranslatedReferencesFound') onUntranslatedReferencesFound(data)
+      })
+    },
+    async addDuplicateTranslationsWithoutReferences(document, language) {
+      await withErrorHandling(async () => {
+        const { data } = await translateDuplicateWithoutReferences({ client, original: document, language, schema })
+        onTranslationCreated(data)
+      })
+    }
   }
 
-  function handleQueryError(e) {
-    reportError(e)
-    alert('Something went wrong, please try again')
+  async function withErrorHandling(f) {
+    try { return f() } catch (e) { onError(e) }
+  }
+}
+
+function useTranslations(translationId, config) {
+  const client = useClient({ apiVersion })
+  const queryClient = useQueryClient()
+
+  const { data, isLoading, isSuccess, isError } = useQuery({
+    queryKey: ['translations', { translationId }],
+    queryFn: getTranslations,
+    onError: handleQueryError,
+    enabled: Boolean(translationId),
+    initialData: [],
+  })
+  const translations = data ?? []
+
+  return { translations, isLoading, isSuccess, isError, reloadTranslations }
+
+  function reloadTranslations() {
+    queryClient.invalidateQueries(['translations'])
   }
 
-  function closeChildPanes() {
+  async function getTranslations() {
+    const translations = await client.fetch(
+      groq`*[translationId == $translationId]`,
+      { translationId }
+    )
+  
+    return Object.fromEntries(
+      translations.map(translation => [translation.language ?? config.defaultLanguage, translation])
+    )
+  }
+}
+
+function handleQueryError(e) {
+  reportError(e)
+  alert('Something went wrong, please try again')
+}
+
+function useCloseChildPanes() {
+  const paneRouter = usePaneRouter()
+  const router = useRouter()
+
+  return () => {
     router.navigate({ panes: paneRouter.routerPanesState.slice(0, paneRouter.groupIndex + 1) })
   }
 }
@@ -361,28 +427,6 @@ function useOnChildDocumentDeletedHack(onDelete) {
   )
 }
 
-async function getTranslations(context) {
-  const { queryKey: [, { document, client }] } = context
-  if (!document) return null
-
-  const { translationId } = document
-
-  if (!translationId) return null
-
-  const translations = await client.fetch(
-    groq`*[translationId == $translationId]`,
-    { translationId }
-  )
-
-  return translations.reduce(
-    (result, translation) => {
-      const language = translation.language ?? config.defaultLanguage
-      return { ...result, [language]: translation }
-    },
-    {}
-  )
-}
-
 async function addFreshTranslation({ client, original, language }) {
   const duplicateId = 'drafts.' + uuid.v4()
 
@@ -435,14 +479,15 @@ async function addDuplicatedTranslation({ client, original, language, schema }) 
   }
 }
 
+/** @param {{ client: SanityClient, original: any, language: string, schema:any }} props */
 async function createDuplicateTranslation({ client, original, language, schema }) {
   const { _id, _createdAt, _rev, _updatedAt, ...document } = original
   const { translationId } = document
 
   const [, duplicate] = await Promise.all([
-    client.patch(_id).setIfMissing({ translationId }).commit(), // TODO: kan dit echt gebeuren?
+    client.patch(_id).setIfMissing({ translationId }).commit(), // TODO: kan dit echt gebeuren? misschien als we van untranslated naar translated zouden gaan, is denk ik niet de bedoeling
     client.create({
-      ...(await pointReferencesToTranslatedDocument(client, document, language, schema)),
+      ...(await cloneAndPointReferencesToTranslatedDocument(client, document, language, schema)),
       _id: 'drafts.' + uuid.v4(),
       translationId,
       language
@@ -489,16 +534,19 @@ function getReferences(data) {
   return Object.values(data).flatMap(getReferences)
 }
 
-async function pointReferencesToTranslatedDocument(client, data, language, schema) {
-  if (!data || typeof data !== 'object') return data
-  if (isReference(data)) return pointToTranslatedDocument(client, data, language, schema)
+async function cloneAndPointReferencesToTranslatedDocument(client, data, language, schema) {
+  if (!data || typeof data !== 'object') 
+    return data
 
+  if (isReference(data)) 
+    return pointToTranslatedDocument(client, data, language, schema)
+  
   if (Array.isArray(data))
-    return Promise.all(data.map(x => pointReferencesToTranslatedDocument(client, x, language, schema)))
+    return Promise.all(data.map(x => cloneAndPointReferencesToTranslatedDocument(client, x, language, schema)))
 
-  return sequentialMapValuesAsync(
+  return mapValuesAsync(
     data,
-    async value => pointReferencesToTranslatedDocument(client, value, language, schema)
+    async value => cloneAndPointReferencesToTranslatedDocument(client, value, language, schema)
   )
 }
 
@@ -508,8 +556,11 @@ async function pointToTranslatedDocument(client, reference, language, schema) {
     { ref: reference._ref }
   )
 
-  if (!doc && reference._strengthenOnPublish) return { ...reference, _ref: uuid.v4() } // This document is created inline, but doesn't have an _id yet
-  if (!typeHasLanguage({ schema, schemaType: doc._type })) return reference // This document is not translatable (e.g.: images)
+  if (!doc && reference._strengthenOnPublish) 
+    return { ...reference, _ref: uuid.v4() } // This document is created inline, but doesn't have an _id yet
+  
+  if (!typeHasLanguage({ schema, schemaType: doc._type })) 
+    return reference // This document is not translatable (e.g.: images)
 
   const id = await client.fetch(
     groq`*[translationId == $translationId && language == $language][0]._id`,
@@ -523,7 +574,7 @@ async function pointToTranslatedDocument(client, reference, language, schema) {
 
 function isReference(x) { return Boolean(x) && typeof x === 'object' && x._ref }
 
-async function sequentialMapValuesAsync(obj, asyncMapFn) {
+async function mapValuesAsync(obj, asyncMapFn) {
   return Object.entries(obj).reduce(
     async (resultPromise, [key, value], ...rest) => {
       const result = await resultPromise
