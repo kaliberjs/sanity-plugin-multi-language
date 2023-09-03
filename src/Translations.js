@@ -551,25 +551,38 @@ async function cloneAndPointReferencesToTranslatedDocument(data, language, { cli
 }
 
 async function pointToTranslatedDocument(reference, language, { client, schema }) {
-  const doc = await client.fetch(
+  const referencedDoc = await client.fetch(
     groq`*[_id == $ref || _id == 'drafts.' + $ref][0] { _type, translationId }`,
     { ref: reference._ref }
   )
 
-  if (!doc && reference._strengthenOnPublish) 
-    return { ...reference, _ref: uuid.v4() } // This document is created inline, but doesn't have an _id yet
+  if (!referencedDoc && reference._strengthenOnPublish) 
+    return { ...reference, _ref: uuid.v4() } // This document is created inline, but doesn't exist yet
   
-  if (!typeHasLanguage({ schema, schemaType: doc._type })) 
+  if (!typeHasLanguage({ schema, schemaType: referencedDoc._type })) 
     return reference // This document is not translatable (e.g.: images)
 
-  const id = await client.fetch(
-    groq`*[translationId == $translationId && language == $language][0]._id`,
-    { translationId: doc.translationId, language }
+  const ids = await client.fetch(
+    groq`*[translationId == $translationId && language == $language]._id`,
+    { translationId: referencedDoc.translationId, language }
   )
 
-  if (!id) throw new Error('Cannot translate reference with id ' + reference._ref)
+  if (!ids.length) throw new Error('Cannot translate reference with id ' + reference._ref)
 
-  return { ...reference, _ref: id.replace(/^drafts\./, '') }
+  const isDraft = ids.every(id => id.startsWith('drafts.'))
+  const [firstId] = ids
+
+  return { 
+    ...reference, 
+    _ref: firstId.replace(/^drafts\./, ''),
+    // If the only translation is an unpublished draft we need to create a special reference
+    ...(isDraft && { 
+      _weak: true, 
+      _strengthenOnPublish: { 
+        _type: referencedDoc._type 
+      } 
+    }) 
+  }
 }
 
 function isReference(x) { return Boolean(x) && typeof x === 'object' && x._ref }
@@ -594,6 +607,7 @@ function mapValues(o, f) {
 
 function removeExcludedReferences(data, exclude) {
   if (!data || typeof data !== 'object') return data
+  if (isReference(data)) console.log(data)
   if (isReference(data) && exclude.map(_id => _id.replace(/^drafts\./, '')).includes(data._ref)) return
 
   return Array.isArray(data)
