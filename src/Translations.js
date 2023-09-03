@@ -41,13 +41,14 @@ function Translations({ document: { displayed: document, draft, published }, con
   const translationId = document?.translationId
 
   const { translations, isLoading, isSuccess, isError, reloadTranslations } = 
-    useTranslations(translationId, config)
+    useTranslations({ translationId, config, onError: handleError })
   
   const [untranslatedReferenceInfo, setUntranslatedReferenceInfo] = 
     React.useState(/** @type {UntranslatedReferenceInfo | null} */ (null))
   
-  const navigateToDocument = useNavigateToDocument()
-  
+  const openDocumentInChildPane = useOpenDocumentInChildPane()
+  const closeChildPanes = useCloseChildPanes()
+
   const {
     addFreshTranslation,
     addDuplicateTranslation,
@@ -55,19 +56,14 @@ function Translations({ document: { displayed: document, draft, published }, con
   } = useTranslationHandling({
     onTranslationCreated(document) {
       reloadTranslations()
-      navigateToDocument(document)  
+      openDocumentInChildPane(document)  
     }, 
     onUntranslatedReferencesFound(untranslatedReferenceInfo) {
       setUntranslatedReferenceInfo(untranslatedReferenceInfo)
     }, 
-    onError(e) {
-      reportError(e)
-      alert('Something went wrong, please try again')
-    },
+    onError: handleError,
   })
   
-  const closeChildPanes = useCloseChildPanes()
-
   useOnChildDocumentDeletedHack(() => {
     closeChildPanes()
     reloadTranslations()
@@ -132,9 +128,14 @@ function Translations({ document: { displayed: document, draft, published }, con
       )}
     </Container>
   )
+
+  function handleError(e) {
+    reportError(e)
+    alert('Something went wrong, please try again')
+  }
 }
 
-function useNavigateToDocument() {
+function useOpenDocumentInChildPane() {
   const paneRouter = usePaneRouter()
   const router = useRouter()
 
@@ -155,21 +156,27 @@ function useTranslationHandling({ onTranslationCreated, onUntranslatedReferences
   return {
     async addFreshTranslation(document, language) {
       await withErrorHandling(async () => {
-        const { data } = await translateFresh({ client, original: document, language })
-        onTranslationCreated(data)
+        const { status, data } = await addFreshTranslation(document, language, { client })
+
+        if (status === 'success') onTranslationCreated(data)
+        else throw new Error(`Failed to create fresh translation (${status})`)
       })
     },
     async addDuplicateTranslation(document, language) {
       await withErrorHandling(async () => {
-        const { status, data } = await translateDuplicate({ client, original: document, language, schema })
+        const { status, data } = await addDuplicatedTranslation(document, language, { client, schema })
+        
         if (status === 'success') onTranslationCreated(data)
         else if (status === 'untranslatedReferencesFound') onUntranslatedReferencesFound(data)
+        else throw new Error(`Failed to create duplicate translation (${status})`)
       })
     },
     async addDuplicateTranslationsWithoutReferences(document, language) {
       await withErrorHandling(async () => {
-        const { data } = await translateDuplicateWithoutReferences({ client, original: document, language, schema })
-        onTranslationCreated(data)
+        const { status, data } = await addDuplicatedTranslation(document, language, { client, schema })
+
+        if (status === 'success') onTranslationCreated(data)
+        else throw new Error(`Failed to create duplicate translation without references (${status})`)
       })
     }
   }
@@ -179,14 +186,14 @@ function useTranslationHandling({ onTranslationCreated, onUntranslatedReferences
   }
 }
 
-function useTranslations(translationId, config) {
+function useTranslations({ translationId, config, onError }) {
   const client = useClient({ apiVersion })
   const queryClient = useQueryClient()
 
   const { data, isLoading, isSuccess, isError } = useQuery({
     queryKey: ['translations', { translationId }],
     queryFn: getTranslations,
-    onError: handleQueryError,
+    onError,
     enabled: Boolean(translationId),
     initialData: [],
   })
@@ -208,11 +215,6 @@ function useTranslations(translationId, config) {
       translations.map(translation => [translation.language ?? config.defaultLanguage, translation])
     )
   }
-}
-
-function handleQueryError(e) {
-  reportError(e)
-  alert('Something went wrong, please try again')
 }
 
 function useCloseChildPanes() {
@@ -331,6 +333,7 @@ function MissingTranslationsDialog({ documents, onClose, onContinue }) {
   )
 }
 
+// TODO: muted is not used anywhere, this might be a refactoring mistage
 function Preview({ document, muted }) {
   const schema = useSchema()
   const schemaType = React.useMemo(() => schema.get(document._type), [document._type])
@@ -381,7 +384,7 @@ function StatusEdited({ edited }) {
   )
 }
 
-function StatusBase({ tooltip, tone, dimmed, status, icon: Icon }) {
+function StatusBase({ tooltip, tone, dimmed, icon: Icon }) {
   return (
     <Tooltip
       content={
@@ -406,20 +409,18 @@ function StatusBase({ tooltip, tone, dimmed, status, icon: Icon }) {
 
 function useOnChildDocumentDeletedHack(onDelete) {
   const paneRouter = usePaneRouter()
-  const callbackRef = React.useRef(null)
-  callbackRef.current = onDelete
+  const onDeleteRef = React.useRef(onDelete)
+  onDeleteRef.current = onDelete
 
-  const [lastPane] = paneRouter.routerPanesState[paneRouter.groupIndex + 1] ?? [{ id: 'no-doc', params: {} }]
-  const editState = useEditState(lastPane.id.replace(/^drafts\./, ''), lastPane.params.type)
+  const [lastPane] = paneRouter.routerPanesState[paneRouter.groupIndex + 1] ?? [{ id: 'no-doc' }]
+  const editState = useEditState(lastPane.id.replace(/^drafts\./, ''), lastPane.params?.type || 'no-type')
   const previousDocRef = React.useRef(editState.draft ?? editState.published)
 
   React.useEffect(
     () => {
       const doc = editState.draft ?? editState.published
 
-      if (previousDocRef.current && !doc) {
-        callbackRef.current()
-      }
+      if (previousDocRef.current && !doc) onDeleteRef.current()
 
       previousDocRef.current = doc
     },
@@ -427,7 +428,7 @@ function useOnChildDocumentDeletedHack(onDelete) {
   )
 }
 
-async function addFreshTranslation({ client, original, language }) {
+async function addFreshTranslation(original, language, { client }) {
   const duplicateId = 'drafts.' + uuid.v4()
 
   const result = await client.create({
@@ -437,26 +438,8 @@ async function addFreshTranslation({ client, original, language }) {
   return { status: 'success', data: result }
 }
 
-async function translateFresh({ client, original, language }) {
-  const { status, data } = await addFreshTranslation({ client, original, language })
-  if (status === 'success') return { status, data }
-  throw new Error(`Failed to create fresh translation (${status})`)
-}
-
-async function translateDuplicate({ client, original, language, schema }) {
-  const { status, data } = await addDuplicatedTranslation({ client, original, language, schema })
-  if (['success', 'untranslatedReferencesFound'].includes(status)) return { status, data }
-  throw new Error(`Failed to create duplicate translation (${status})`)
-}
-
-async function translateDuplicateWithoutReferences({ client, original, language, schema }) {
-  const { status, data } = await addDuplicatedTranslation({ client, original, language, schema })
-  if (status === 'success') return { status, data }
-  throw new Error(`Failed to create duplicate translation without references (${status})`)
-}
-
-async function addDuplicatedTranslation({ client, original, language, schema }) {
-  const untranslatedReferences = await findUntranslatedReferences({ client, document: original, language, schema })
+async function addDuplicatedTranslation( original, language, { client,schema }) {
+  const untranslatedReferences = await findUntranslatedReferences(original, language, { client, schema })
 
   if (untranslatedReferences.length) return untranslatedReferencesFound(untranslatedReferences)
 
@@ -497,7 +480,7 @@ async function createDuplicateTranslation({ client, original, language, schema }
   return duplicate
 }
 
-async function findUntranslatedReferences({ client, document, language, schema }) {
+async function findUntranslatedReferences(document, language, { client, schema }) {
   // Because the referenceIds are _id's, read from their respective documents,
   // it's possible that they are prefixed with 'drafts.' and do not have a
   // published version (if they were created inline).
@@ -607,7 +590,6 @@ function mapValues(o, f) {
 
 function removeExcludedReferences(data, exclude) {
   if (!data || typeof data !== 'object') return data
-  if (isReference(data)) console.log(data)
   if (isReference(data) && exclude.map(_id => _id.replace(/^drafts\./, '')).includes(data._ref)) return
 
   return Array.isArray(data)
