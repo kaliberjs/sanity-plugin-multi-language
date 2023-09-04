@@ -28,20 +28,20 @@ function reportError(e) {
 
 const queryClient = new QueryClient()
 
-function TranslationsWithQueryClient({ document, config }) {
+function TranslationsWithQueryClient({ document, options }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <Translations {...{ document, config }} />
+      <Translations {...{ document, options }} />
     </QueryClientProvider>
   )
 }
 
 
-function Translations({ document: { displayed: document, draft, published }, config }) {
+function Translations({ document: { displayed: document, draft, published }, options }) {
   const translationId = document?.translationId
 
   const { translations, isLoading, isSuccess, isError, reloadTranslations } = 
-    useTranslations({ translationId, config, onError: handleError })
+    useTranslations({ translationId, options, onError: handleError })
   
   const [untranslatedReferenceInfo, setUntranslatedReferenceInfo] = 
     React.useState(/** @type {UntranslatedReferenceInfo | null} */ (null))
@@ -100,7 +100,7 @@ function Translations({ document: { displayed: document, draft, published }, con
           (published || draft)
             ? <Languages
                 original={document}
-                languages={config.languages}
+                languages={options.languages}
                 {...{ translations }}
                 onTranslateFresh={language => {
                   addFreshTranslation(document, language)
@@ -186,7 +186,7 @@ function useTranslationHandling({ onTranslationCreated, onUntranslatedReferences
   }
 }
 
-function useTranslations({ translationId, config, onError }) {
+function useTranslations({ translationId, options, onError }) {
   const client = useClient({ apiVersion })
   const queryClient = useQueryClient()
 
@@ -212,7 +212,7 @@ function useTranslations({ translationId, config, onError }) {
     )
   
     return Object.fromEntries(
-      translations.map(translation => [translation.language ?? config.defaultLanguage, translation])
+      translations.map(translation => [translation.language ?? options.defaultLanguage, translation])
     )
   }
 }
