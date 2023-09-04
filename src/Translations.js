@@ -483,7 +483,7 @@ async function pointToTranslatedDocument(reference, language) {
   if (!referencedDoc && reference._strengthenOnPublish) 
     return { ...reference, _ref: uuid.v4() } // This document is created inline, but doesn't exist yet
   
-  if (!typeHasLanguage(doc._type)) 
+  if (!typeHasLanguage(referencedDoc._type)) 
     return reference // This document is not translatable (e.g.: images)
 
   const ids = await sanityClient.fetch(
