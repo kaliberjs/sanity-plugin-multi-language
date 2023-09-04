@@ -475,22 +475,38 @@ async function pointReferencesToTranslatedDocument(data, language) {
 }
 
 async function pointToTranslatedDocument(reference, language) {
-  const doc = await sanityClient.fetch(
+  const referencedDoc = await sanityClient.fetch(
     groq`*[_id == $ref || _id == 'drafts.' + $ref][0] { _type, translationId }`,
     { ref: reference._ref }
   )
 
-  if (!doc && reference._strengthenOnPublish) return { ...reference, _ref: uuid.v4() } // This document is created inline, but doesn't have an _id yet
-  if (!typeHasLanguage(doc._type)) return reference // This document is not translatable (e.g.: images)
+  if (!referencedDoc && reference._strengthenOnPublish) 
+    return { ...reference, _ref: uuid.v4() } // This document is created inline, but doesn't exist yet
+  
+  if (!typeHasLanguage(referencedDoc._type)) 
+    return reference // This document is not translatable (e.g.: images)
 
-  const id = await sanityClient.fetch(
-    groq`*[translationId == $translationId && language == $language][0]._id`,
-    { translationId: doc.translationId, language }
+  const ids = await sanityClient.fetch(
+    groq`*[translationId == $translationId && language == $language]._id`,
+    { translationId: referencedDoc.translationId, language }
   )
 
-  if (!id) throw new Error('Cannot translate reference with id ' + reference._ref)
+  if (!ids.length) throw new Error('Cannot translate reference with id ' + reference._ref)
 
-  return { ...reference, _ref: id.replace(/^drafts\./, '') }
+  const isDraft = ids.every(id => id.startsWith('drafts.'))
+  const [firstId] = ids
+
+  return { 
+    ...reference, 
+    _ref: firstId.replace(/^drafts\./, ''),
+    // If the only translation is an unpublished draft we need to create a special reference
+    ...(isDraft && { 
+      _weak: true, 
+      _strengthenOnPublish: { 
+        _type: referencedDoc._type 
+      } 
+    }) 
+  }
 }
 
 function isReference(x) { return Boolean(x) && typeof x === 'object' && x._ref }
