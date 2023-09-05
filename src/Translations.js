@@ -39,17 +39,32 @@ function TranslationsWithQueryClient({ document }) {
   )
 }
 
+export { CustomizableTranslationsWithQueryClient as CustomizableTranslations }
+function CustomizableTranslationsWithQueryClient({ document, defaultLanguage, languages }) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <CustomizableTranslations {...{ document, defaultLanguage, languages }} />
+    </QueryClientProvider>
+  )
+}
+
 export function typeHasLanguage(type) {
   return schema.get(type).fields.some(x => x.name === 'language')
 }
 
-function Translations({ document: { displayed: document, draft, published } }) {
+function Translations({ document }) {
+  const { defaultLanguage, languages } = pluginConfig
+  return <CustomizableTranslations {...{ document, defaultLanguage, languages }}/>
+}
+
+function CustomizableTranslations({ document: doc, defaultLanguage, languages }) {
+  const { displayed: document, draft, published } = doc
   const [modal, setModal] = React.useState(null)
   const schemaType = schema.get(document._type)
   const queryClient = useQueryClient()
   const { data, isLoading, isSuccess, isError } = useQuery({
     queryKey: ['translations', { document }],
-    queryFn: getTranslations,
+    queryFn: context => getTranslations(context, defaultLanguage),
     onError: handleQueryError
   })
   const translations = data ?? []
@@ -116,7 +131,7 @@ function Translations({ document: { displayed: document, draft, published } }) {
           (published || draft)
             ? <Languages
                 original={document}
-                {...{ translations, schemaType }}
+                {...{ translations, schemaType, languages }}
                 onTranslateFresh={language => {
                   addFreshTranslation({ original: document, language })
                 }}
@@ -166,25 +181,25 @@ function Translations({ document: { displayed: document, draft, published } }) {
   }
 }
 
-function Languages({ original, translations, onTranslateFresh, onTranslateDuplicate }) {
+function Languages({ original, translations, onTranslateFresh, onTranslateDuplicate, languages }) {
   return (
     <ul className={styles.languages}>
-      {Object.keys(pluginConfig.languages)
+      {Object.keys(languages)
         .filter(x => x !== original.language)
         .map(language => {
           const document = translations[language]
           return (
             <Language
               key={language}
-              title={pluginConfig.languages[language].title}
+              title={languages[language].title}
             >
               {document ? (
                 <EditLink {...{ document }}>
-                  <PreviewWithFlag {...{ document }} />
+                  <PreviewWithFlag {...{ document, languages }} />
                 </EditLink> 
               ) : (
                 <TranslateActions
-                  {...{ language } }
+                  {...{ language , languages} }
                   onClickDuplicate={() => onTranslateDuplicate(language)}
                   onClickFresh={() => onTranslateFresh(language)}
                 />
@@ -219,8 +234,8 @@ function EditLink({ document, children }) {
   )
 }
 
-function TranslateActions({ onClickDuplicate, onClickFresh, language }) {
-  const icu = pluginConfig.languages[language].icu
+function TranslateActions({ onClickDuplicate, onClickFresh, language, languages }) {
+  const icu = languages[language].icu
 
   return (
     <Card shadow={1} paddingY={2} paddingLeft={3} paddingRight={2} radius={2}>
@@ -229,7 +244,7 @@ function TranslateActions({ onClickDuplicate, onClickFresh, language }) {
           <Flag country={getCountryFromIcu(icu)} />
         </Box>
         <Button onClick={onClickFresh} icon={ComposeIcon} tone='primary' mode='ghost' text='Create empty translation' style={{ width: '100%'}} />
-        <Button onClick={onClickDuplicate} icon={DocumentsIcon} tone='primary' text={`Duplicate in ${pluginConfig.languages[language].title.toLowerCase()}`} style={{ width: '100%'}} />
+        <Button onClick={onClickDuplicate} icon={DocumentsIcon} tone='primary' text={`Duplicate in ${languages[language].title.toLowerCase()}`} style={{ width: '100%'}} />
       </Flex>
     </Card>
   )
@@ -277,8 +292,8 @@ function Preview({ document, muted = undefined }) {
   return <PreviewBase {...{ document, muted }} />
 }
 
-function PreviewWithFlag({ document, muted = undefined }) {
-  const icu = pluginConfig.languages[document.language].icu
+function PreviewWithFlag({ document, muted = undefined, languages }) {
+  const icu = languages[document.language].icu
   return <PreviewBase flag={<Flag country={getCountryFromIcu(icu)} />} {...{ document, muted }} />
 }
 
@@ -333,7 +348,7 @@ function useOnChildDocumentDeletedHack(onDelete) {
   )
 }
 
-async function getTranslations(context) {
+async function getTranslations(context, defaultLanguage) {
   const { queryKey: [, { document }] } = context
   if (!document) return null
 
@@ -348,7 +363,7 @@ async function getTranslations(context) {
 
   return translations.reduce(
     (result, translation) => {
-      const language = translation.language ?? pluginConfig.defaultLanguage
+      const language = translation.language ?? defaultLanguage
       return { ...result, [language]: translation }
     },
     {}
