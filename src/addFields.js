@@ -40,7 +40,7 @@ export function addFields(config) {
           of: [{ type: 'string' }],
           readOnly: true,
           hidden: ({ currentUser }) => !currentUser.roles.some((x) => x.name === 'administrator'),
-          initialValue: uuid(), // TODO: this will not work, all documents would have the same initial value
+          initialValue: () => uuid(),
           kaliberOptions: { // TODO: this seems to come from @kaliber/sanity-plugin-duplicate, I don't tink introducing new keys on types is a good idea. Especially since Sanity is moving towards more strictly typed code
             duplicate: () => uuid()
           }
