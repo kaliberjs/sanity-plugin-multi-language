@@ -13,40 +13,35 @@ Document level translations.
 `sanity.config.js`
 
 ```js
+import { addFields as addMultiLanguageFields } from '@kaliber/sanity-plugin-multi-language'
+
 defineConfig({
-  // ...
-
   plugins: [
-    // ...
     deskTool({
-      structure: deskStructure,
-      defaultDocumentNode: buildDefaultDocumentNode(config)
-    }),
-    multiLanguage(config.multiLanguage),
-  ],
+      defaultDocumentNode: (S, context) => {
+        const getClient = context.getClient.bind(context)
 
-  // ...
+        const views = [
+          S.view.form(),
+          typeHasLanguage(context) && S.view
+            .component(Translations)
+            .options({ multiLanguage, reportError })
+            .title('Translations'),
+          
+        ].filter(Boolean)
+
+        return S.document().views(views)
+      }
+    }),
+  ],
+  schema: {
+      types: (prev, context) => prev
+        .concat(schemaTypes)
+        .map(addMultiLanguageFields({ multiLanguage: clientConfig.multiLanguage, reportError })),
+    },
 })
 ```
 
-`deskStructure.js`
-
-```js
-import { Translations, typeHasLanguage } from '@kaliber/sanity-plugin-multi-language'
-
-// ...
-
-export function buildDefaultDocumentNode(config) {
-  return (S, context) => {
-    const views = [
-      S.view.form(),
-      typeHasLanguage(context) && translations(S, context, config.multiLanguage)
-    ]
-
-    return S.document().views(views.filter(Boolean))
-  }
-}
-```
 
 `schema/documents/page.js`
 
@@ -56,9 +51,10 @@ export const page = {
   name: 'page',
   title: 'Page',
   options: {
-    multiLanguage: true
+    multiLanguage: true,
+    ...
   },
-  // ...
+  ...
 }
 ```
 
@@ -88,17 +84,14 @@ _config.multiLanguage_
 
 In this plugin:
 ```
-> yarn link-watch
-```
-
-In your studio folder:
-```
-> npx yalc add @kaliber/sanity-plugin-multi-language
-> npx yalc add @kaliber/sanity-plugin-multi-language --link 
 > yarn
+> yarn link
 ```
 
-Then start your studio.
+In your project:
+```
+> yarn link @kaliber/sanity-plugin-multi-language 
+```
 
 ## Publish
 
