@@ -1,6 +1,6 @@
 {
   "name": "@kaliber/sanity-plugin-multi-language",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "description": "Document level translations.",
   "keywords": [
     "sanity",
@@ -30,10 +30,10 @@
     "@sanity/icons": "^2.4.1",
     "@sanity/ui": "^1.8.2",
     "country-flag-icons": "^1.5.7",
-    "groq": "^3.16.2",
+    "groq": "^3.16.4",
     "react": "^18.2.0",
     "react-query": "^3.39.3",
-    "sanity": "^3.16.2",
+    "sanity": "^3.16.4",
     "styled-components": "^6.0.7",
     "uuid": "^9.0.0"
   }

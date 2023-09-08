@@ -26,7 +26,11 @@ export function addFields(config) {
           hidden: languageCount <= 1,
           initialValue: async (_, context) => {
             const client = context.getClient({ apiVersion })
-            return (await getParentRefLanguageHack(client)) ?? config.multiLanguage.defaultLanguage
+            return (
+              (await getParentRefLanguageHack(client)) ?? 
+              (await config.getDefaultLanguage?.({ sanityClient: client })) ??
+              config.multiLanguage.defaultLanguage
+            )
           },
         },
         {
@@ -36,7 +40,10 @@ export function addFields(config) {
           of: [{ type: 'string' }],
           readOnly: true,
           hidden: ({ currentUser }) => !currentUser.roles.some((x) => x.name === 'administrator'),
-          initialValue: uuid()
+          initialValue: uuid(), // TODO: this will not work, all documents would have the same initial value
+          kaliberOptions: { // TODO: this seems to come from @kaliber/sanity-plugin-duplicate, I don't tink introducing new keys on types is a good idea. Especially since Sanity is moving towards more strictly typed code
+            duplicate: () => uuid()
+          }
         },
         ...type.fields ?? []
       ]

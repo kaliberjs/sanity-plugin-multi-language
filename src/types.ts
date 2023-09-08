@@ -8,5 +8,6 @@ export type Config = {
       }
     },
     defaultLanguage: string,
-  }
+  },
+  getDefaultLanguage?(params: { sanityClient: import('sanity').SanityClient }): Promise<string>
 }
