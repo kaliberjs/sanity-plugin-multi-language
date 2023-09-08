@@ -8,26 +8,19 @@ import { usePaneRouter } from 'sanity/desk'
 import { Container, Stack, Flex, Box, Inline, Card, Dialog, Grid, Text, Spinner, Button, Tooltip } from '@sanity/ui'
 import { DocumentsIcon, ComposeIcon, EditIcon, PublishIcon } from '@sanity/icons'
 import { Flag } from './Flag'
-import { getCountryFromIcu } from './machinery/getCountryFromIcu'
-import { typeHasLanguage } from './index'
+import { getCountryFromIcu } from '../machinery/getCountryFromIcu'
+import { typeHasLanguage } from '../typeHasLanguage'
+import apiVersion from '../apiVersion'
 
-// Ik denk dat we hier een plugin voor moeten hebben (misschien ook niet en denk ik wel te moeilijk)
-// import { reportError } from '../../../machinery/reportError'
 import styles from './Translations.css'
-
-const apiVersion = '2023-08-28'
 
 /** @typedef {{ references: any, cleanDuplicate: any, language: string }} UntranslatedReferenceInfo */
 
 export { TranslationsWithQueryClient as Translations }
 
-function reportError(e) {
-  console.error(e)
-  // TODO: report to rollbar
-}
-
 const queryClient = new QueryClient()
 
+/** @param {{ document: any, options: import('../types').Config }} props */
 function TranslationsWithQueryClient({ document, options }) {
   return (
     <QueryClientProvider client={queryClient}>
@@ -36,12 +29,11 @@ function TranslationsWithQueryClient({ document, options }) {
   )
 }
 
-
 function Translations({ document: { displayed: document, draft, published }, options }) {
   const translationId = document?.translationId
 
   const { translations, isLoading, isSuccess, isError, reloadTranslations } = 
-    useTranslations({ translationId, options, onError: handleError })
+    useTranslations({ translationId, options })
   
   const [untranslatedReferenceInfo, setUntranslatedReferenceInfo] = 
     React.useState(/** @type {UntranslatedReferenceInfo | null} */ (null))
@@ -61,7 +53,7 @@ function Translations({ document: { displayed: document, draft, published }, opt
     onUntranslatedReferencesFound(untranslatedReferenceInfo) {
       setUntranslatedReferenceInfo(untranslatedReferenceInfo)
     }, 
-    onError: handleError,
+    onError: options.reportError,
   })
   
   useOnChildDocumentDeletedHack(() => {
@@ -100,7 +92,7 @@ function Translations({ document: { displayed: document, draft, published }, opt
           (published || draft)
             ? <Languages
                 original={document}
-                languages={options.languages}
+                languages={options.multiLanguage.languages}
                 {...{ translations }}
                 onTranslateFresh={language => {
                   addFreshTranslation(document, language)
@@ -186,14 +178,14 @@ function useTranslationHandling({ onTranslationCreated, onUntranslatedReferences
   }
 }
 
-function useTranslations({ translationId, options, onError }) {
+function useTranslations({ translationId, options }) {
   const client = useClient({ apiVersion })
   const queryClient = useQueryClient()
 
   const { data, isLoading, isSuccess, isError } = useQuery({
     queryKey: ['translations', { translationId }],
     queryFn: getTranslations,
-    onError,
+    onError: options.reportError,
     enabled: Boolean(translationId),
     initialData: [],
   })
@@ -212,7 +204,10 @@ function useTranslations({ translationId, options, onError }) {
     )
   
     return Object.fromEntries(
-      translations.map(translation => [translation.language ?? options.defaultLanguage, translation])
+      translations.map(translation => [
+        translation.language ?? options.multiLanguage.defaultLanguage, 
+        translation
+      ])
     )
   }
 }
@@ -298,6 +293,7 @@ function TranslateActions({ onClickDuplicate, onClickFresh, language, languages 
 function MissingTranslationsDialog({ documents, onClose, onContinue }) {
   return (
     <Dialog
+      id='missingTranslationsDialog'
       width={1}
       header='Caution'
       footer={
@@ -333,8 +329,7 @@ function MissingTranslationsDialog({ documents, onClose, onContinue }) {
   )
 }
 
-// TODO: muted is not used anywhere, this might be a refactoring mistage
-function Preview({ document, muted }) {
+function Preview({ document }) {
   const schema = useSchema()
   const schemaType = React.useMemo(() => schema.get(document._type), [document._type])
   const editState = useEditState(document._id.replace(/^drafts\./, ''), document._type)
@@ -342,8 +337,8 @@ function Preview({ document, muted }) {
 
   return (
     <Card
-      shadow={muted ? 0 : 1}
-      tone={muted ? 'transparent' : 'default'}
+      shadow={1}
+      tone='default'
       padding={2}
       radius={2}
     >
