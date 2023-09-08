@@ -8,7 +8,7 @@
     "multi-language"
   ],
   "license": "MIT",
-  "main": "src/index.js",
+  "main": "src/sanityPluginMultiLanguage.js",
   "files": [
     "src/**",
     "sanity.json",
