@@ -2,8 +2,6 @@
 
 Document level translations.
 
-*Heads up:* this is the Sanity v3 branch of this plugin. It was tested with `v3.0.0-rc.3`.
-
 ## Installation
 
 ```
