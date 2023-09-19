@@ -53,6 +53,8 @@ export function addFields(config) {
 
 async function getParentRefLanguageHack(client) {
   const segments = decodeURIComponent(window.location.pathname).split(';')
+  if (segments.length === 1) return
+
   const [lastSegment] = segments.slice(-1)
   const [id] = lastSegment.split(',')
 
