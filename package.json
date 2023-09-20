@@ -30,10 +30,10 @@
     "@sanity/icons": "^2.4.1",
     "@sanity/ui": "^1.8.2",
     "country-flag-icons": "^1.5.7",
-    "groq": "^3.16.4",
+    "groq": "^3.16.7",
     "react-query": "^3.39.3",
-    "sanity": "^3.16.4",
-    "uuid": "^9.0.0"
+    "sanity": "^3.16.7",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@kaliber/build": "^0.0.144"
