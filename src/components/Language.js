@@ -1,4 +1,3 @@
-import React from 'react'
 import { Flex, Card, Text } from '@sanity/ui'
 import { Flag } from './Flag'
 import { getCountryFromIcu } from '../machinery/getCountryFromIcu'
