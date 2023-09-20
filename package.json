@@ -1,47 +1,41 @@
 {
   "name": "@kaliber/sanity-plugin-multi-language",
-  "version": "2.1.0",
+  "version": "3.0.0",
+  "description": "Document level translations.",
   "keywords": [
     "sanity",
     "sanity-plugin",
     "multi-language"
   ],
   "license": "MIT",
-  "main": "lib/multi-language.js",
+  "main": "src/sanityPluginMultiLanguage.js",
   "files": [
     "src/**",
-    "lib/**",
     "sanity.json",
-    "config.dist.json",
-    "LICENCE",
+    "LICENSE",
     "package.json",
-    "readme.md"
+    "readme.md",
+    "v2-incompatible.js"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "sanipack build",
-    "watch": "sanipack build --watch",
-    "verify": "sanipack verify",
-    "prepublishOnly": "sanipack build && sanipack verify",
     "prepare": "[ -f scripts/addPeerDependencies.js ] && node scripts/addPeerDependencies.js"
   },
   "dependencies": {
-    "@sanity/icons": "^1.2.7",
-    "@sanity/ui": "^0.37.7"
+    "@sanity/incompatible-plugin": "^1.0.4"
   },
   "peerDependencies": {
-    "@sanity/base": "^2.36.2",
-    "@sanity/desk-tool": "^2.36.2",
-    "@sanity/react-hooks": "^2.36.2",
+    "@sanity/icons": "^2.4.1",
+    "@sanity/ui": "^1.8.2",
     "country-flag-icons": "^1.5.7",
-    "groq": "^3.16.2",
-    "react": "^18.2.0",
+    "groq": "^3.16.4",
     "react-query": "^3.39.3",
+    "sanity": "^3.16.4",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "sanipack": "^2.1.0"
+    "@kaliber/build": "^0.0.144"
   }
 }
