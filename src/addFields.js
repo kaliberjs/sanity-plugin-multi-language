@@ -7,7 +7,7 @@ export function addFields(config) {
   const languageCount = Object.values(config.multiLanguage.languages ?? {}).length
 
   return type => {
-    if (!type.options?.multiLanguage) return type
+    if (!type.options?.kaliber?.multiLanguage) return type
     if (type.fields.some(x => ['language', 'translationId'].includes(x.name))) {
       throw new Error(`Your '${type.name}' schema already contains a \`language\` or \`translationId\` field. Remove these fields before enabling multiLanguage.`)
     }
@@ -41,9 +41,11 @@ export function addFields(config) {
           readOnly: true,
           hidden: ({ currentUser }) => !currentUser.roles.some((x) => x.name === 'administrator'),
           initialValue: () => uuid(),
-          kaliberOptions: { // TODO: this seems to come from @kaliber/sanity-plugin-duplicate, I don't tink introducing new keys on types is a good idea. Especially since Sanity is moving towards more strictly typed code
-            duplicate: () => uuid()
-          }
+          options: {
+            kaliber: {
+              duplicate: () => uuid()
+            }
+          },
         },
         ...type.fields ?? []
       ]

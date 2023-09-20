@@ -51,7 +51,10 @@ export const page = {
   name: 'page',
   title: 'Page',
   options: {
-    multiLanguage: true,
+    kaliber: {
+      multiLanguage: true,
+      ...
+    },
     ...
   },
   ...
