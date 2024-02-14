@@ -1,6 +1,6 @@
 {
   "name": "@kaliber/sanity-plugin-multi-language",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Document level translations.",
   "keywords": [
     "sanity",
@@ -27,12 +27,12 @@
     "@sanity/incompatible-plugin": "^1.0.4"
   },
   "peerDependencies": {
-    "@sanity/icons": "^2.7.0",
-    "@sanity/ui": "^1.9.3",
+    "@sanity/icons": "^2.10.2",
+    "@sanity/ui": "^2.0.2",
     "country-flag-icons": "^1.5.9",
-    "groq": "^3.20.2",
+    "groq": "^3.29.0",
     "react-query": "^3.39.3",
-    "sanity": "^3.20.2",
+    "sanity": "^3.29.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
