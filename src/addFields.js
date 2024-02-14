@@ -28,7 +28,7 @@ export function addFields(config) {
             const client = context.getClient({ apiVersion })
             return (
               (await getParentRefLanguageHack(client)) ??
-              (await config.getDefaultLanguage?.({ sanityClient: client, currentUser: context.currentUser })) ??
+              (await config.getDefaultLanguage?.({ sanityClient: client, currentUser: context.currentUser, schema: type })) ??
               config.multiLanguage.defaultLanguage
             )
           },

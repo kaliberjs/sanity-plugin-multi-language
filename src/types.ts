@@ -9,5 +9,9 @@ export type Config = {
     },
     defaultLanguage: string,
   },
-  getDefaultLanguage?(params: { sanityClient: import('sanity').SanityClient, currentUser: import('sanity').CurrentUser }): Promise<string>
+  getDefaultLanguage?(params: {
+    sanityClient: import('sanity').SanityClient,
+    currentUser: import('sanity').CurrentUser,
+    schema: import('sanity').Schema
+  }): Promise<string>
 }
