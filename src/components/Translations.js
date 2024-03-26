@@ -1,5 +1,5 @@
 import React from 'react'
-import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from 'react-query'
+import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as uuid from 'uuid'
 import groq from 'groq'
 import { useEditState, useSchema, useClient, Preview as SanityPreview, SanityClient } from 'sanity'
@@ -181,34 +181,38 @@ function useTranslationHandling({ onTranslationCreated, onUntranslatedReferences
 function useTranslations({ translationId, options }) {
   const client = useClient({ apiVersion })
   const queryClient = useQueryClient()
+  const { reportError } = options
 
-  const { data, isLoading, isSuccess, isError } = useQuery({
+  const { data, isPending, isSuccess, isError } = useQuery({
     queryKey: ['translations', { translationId }],
-    queryFn: getTranslations,
-    onError: options.reportError,
+    queryFn: () => getTranslations({reportError}),
     enabled: Boolean(translationId),
     initialData: [],
   })
   const translations = data ?? []
 
-  return { translations, isLoading, isSuccess, isError, reloadTranslations }
+  return { translations, isPending, isSuccess, isError, reloadTranslations }
 
   function reloadTranslations() {
-    queryClient.invalidateQueries(['translations'])
+    queryClient.invalidateQueries(({ queryKey: ['translations'] }))
   }
 
-  async function getTranslations() {
-    const translations = await client.fetch(
-      groq`*[translationId == $translationId]`,
-      { translationId }
-    )
-  
-    return Object.fromEntries(
-      translations.map(translation => [
-        translation.language ?? options.multiLanguage.defaultLanguage, 
-        translation
-      ])
-    )
+  async function getTranslations({reportError}) {
+    try {
+      const translations = await client.fetch(
+        groq`*[translationId == $translationId]`,
+        { translationId }
+      )
+      
+      return Object.fromEntries(
+        translations.map(translation => [
+          translation.language ?? options.multiLanguage.defaultLanguage, 
+          translation
+        ])
+      )
+    } catch (e) {
+      reportError(e)
+    }
   }
 }
 
