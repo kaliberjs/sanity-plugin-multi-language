@@ -185,7 +185,7 @@ function useTranslations({ translationId, options }) {
 
   const { data, isPending, isSuccess, isError } = useQuery({
     queryKey: ['translations', { translationId }],
-    queryFn: () => getTranslations({reportError}),
+    queryFn: () => getTranslations({ reportError }),
     enabled: Boolean(translationId),
     initialData: [],
   })
@@ -197,7 +197,7 @@ function useTranslations({ translationId, options }) {
     queryClient.invalidateQueries(({ queryKey: ['translations'] }))
   }
 
-  async function getTranslations({reportError}) {
+  async function getTranslations({ reportError }) {
     try {
       const translations = await client.fetch(
         groq`*[translationId == $translationId]`,
