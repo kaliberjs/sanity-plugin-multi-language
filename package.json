@@ -29,9 +29,9 @@
   "peerDependencies": {
     "@sanity/icons": "^2.10.2",
     "@sanity/ui": "^2.0.2",
+    "@tanstack/react-query": "^5.28.8",
     "country-flag-icons": "^1.5.9",
     "groq": "^3.29.0",
-    "react-query": "^3.39.3",
     "sanity": "^3.29.0",
     "uuid": "^9.0.1"
   },
