@@ -207,7 +207,6 @@ function useTranslations({ translationId, options }) {
       )
     } catch (e) {
       reportError(e)
-      alert('Something went wrong, please try again')
     }
   }
 }
