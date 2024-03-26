@@ -120,11 +120,6 @@ function Translations({ document: { displayed: document, draft, published }, opt
       )}
     </Container>
   )
-
-  function handleError(e) {
-    reportError(e)
-    alert('Something went wrong, please try again')
-  }
 }
 
 function useOpenDocumentInChildPane() {
@@ -212,6 +207,7 @@ function useTranslations({ translationId, options }) {
       )
     } catch (e) {
       reportError(e)
+      alert('Something went wrong, please try again')
     }
   }
 }
