@@ -1,6 +1,6 @@
 {
   "name": "@kaliber/sanity-plugin-multi-language",
-  "version": "2.1.0",
+  "version": "2.2.0-beta1",
   "keywords": [
     "sanity",
     "sanity-plugin",
@@ -35,11 +35,11 @@
     "@sanity/base": "^2.36.2",
     "@sanity/desk-tool": "^2.36.2",
     "@sanity/react-hooks": "^2.36.2",
-    "country-flag-icons": "^1.5.7",
-    "groq": "^3.16.2",
+    "country-flag-icons": "^1.5.10",
+    "groq": "^3.36.2",
     "react": "^18.2.0",
     "react-query": "^3.39.3",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "sanipack": "^2.1.0"
