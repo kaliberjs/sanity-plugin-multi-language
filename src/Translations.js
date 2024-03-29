@@ -40,10 +40,10 @@ function TranslationsWithQueryClient({ document }) {
 }
 
 export { CustomizableTranslationsWithQueryClient as CustomizableTranslations }
-function CustomizableTranslationsWithQueryClient({ document, defaultLanguage, languages }) {
+function CustomizableTranslationsWithQueryClient({ document, defaultLanguage, languages, additionalFreshTranslationProperties = doc => ({}) }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <CustomizableTranslations {...{ document, defaultLanguage, languages }} />
+      <CustomizableTranslations {...{ document, defaultLanguage, languages, additionalFreshTranslationProperties }} />
     </QueryClientProvider>
   )
 }
@@ -57,7 +57,7 @@ function Translations({ document }) {
   return <CustomizableTranslations {...{ document, defaultLanguage, languages }}/>
 }
 
-function CustomizableTranslations({ document: doc, defaultLanguage, languages }) {
+function CustomizableTranslations({ document: doc, defaultLanguage, languages, additionalFreshTranslationProperties = doc => ({}) }) {
   const { displayed: document, draft, published } = doc
   const [modal, setModal] = React.useState(null)
   const schemaType = schema.get(document._type)
@@ -79,7 +79,7 @@ function CustomizableTranslations({ document: doc, defaultLanguage, languages })
   // TODO: Show toast on error
 
   const { mutate: addFreshTranslation } = useMutation({
-    mutationFn: translateFresh,
+    mutationFn: ({ original, language }) => translateFresh({ original, language, additionalFreshTranslationProperties }),
     onSuccess: handleTranslationCreated,
     onError: handleQueryError
   })
@@ -110,13 +110,13 @@ function CustomizableTranslations({ document: doc, defaultLanguage, languages })
     >
       <Stack space={2}>
         <Text weight='semibold'>Translations</Text>
-        
+
         {isLoading && (
           <Flex justify="center">
             <Spinner muted />
           </Flex>
         )}
-        
+
         {isError && (
           <Card padding={[3, 3, 4]}
             radius={2}
@@ -157,7 +157,7 @@ function CustomizableTranslations({ document: doc, defaultLanguage, languages })
 
   function handleTranslationCreated({ data }) {
     queryClient.invalidateQueries(['translations'])
-    
+
     router.navigate({
       panes: [
         ...paneRouter.routerPanesState,
@@ -196,7 +196,7 @@ function Languages({ original, translations, onTranslateFresh, onTranslateDuplic
               {document ? (
                 <EditLink {...{ document }}>
                   <PreviewWithFlag {...{ document, languages }} />
-                </EditLink> 
+                </EditLink>
               ) : (
                 <TranslateActions
                   {...{ language , languages} }
@@ -239,7 +239,7 @@ function TranslateActions({ onClickDuplicate, onClickFresh, language, languages 
 
   return (
     <Card shadow={1} paddingY={2} paddingLeft={3} paddingRight={2} radius={2}>
-      <Flex gap={3} align='center'> 
+      <Flex gap={3} align='center'>
         <Box flex='0 0 auto'>
           <Flag country={getCountryFromIcu(icu)} />
         </Box>
@@ -304,9 +304,9 @@ function PreviewBase({ document, flag = undefined, muted }) {
 
   return (
     <Card
-      shadow={muted ? 0 : 1} 
-      tone={muted ? 'transparent' : 'default'} 
-      padding={2} 
+      shadow={muted ? 0 : 1}
+      tone={muted ? 'transparent' : 'default'}
+      padding={2}
       radius={2}
     >
       <Flex gap={2} paddingX={2} align='center'>
@@ -335,7 +335,7 @@ function useOnChildDocumentDeletedHack(onDelete) {
   const previousDocRef = React.useRef(editState.draft ?? editState.published)
 
   React.useEffect(
-    () => { 
+    () => {
       const doc = editState.draft ?? editState.published
 
       if (previousDocRef.current && !doc) {
@@ -370,18 +370,19 @@ async function getTranslations(context, defaultLanguage) {
   )
 }
 
-async function addFreshTranslation({ original, language }) {
+async function addFreshTranslation({ original, language, additionalFreshTranslationProperties }) {
   const duplicateId = 'drafts.' + uuid.v4()
 
   const result = await sanityClient.create({
-    _type: original._type, _id: duplicateId, translationId: original.translationId, language
+    ...additionalFreshTranslationProperties(original),
+    _type: original._type, _id: duplicateId, translationId: original.translationId, language,
   })
 
   return { status: 'success', data: result }
 }
 
-async function translateFresh({ original, language }) {
-  const { status, data } = await addFreshTranslation({ original, language })
+async function translateFresh({ original, language, additionalFreshTranslationProperties }) {
+  const { status, data } = await addFreshTranslation({ original, language, additionalFreshTranslationProperties })
   if (status === 'success') return { status, data }
   throw new Error(`Failed to create fresh translation (${status})`)
 }
@@ -440,12 +441,12 @@ async function createDuplicateTranslation({ original, language }) {
 }
 
 async function findUntranslatedReferences({ document, language }) {
-  // Because the referenceIds are _id's, read from their respective documents, 
-  // it's possible that they are prefixed with 'drafts.' and do not have a 
+  // Because the referenceIds are _id's, read from their respective documents,
+  // it's possible that they are prefixed with 'drafts.' and do not have a
   // published version (if they were created inline).
   const referenceIds = getReferences(document).map(x => x._ref)
     .flatMap(x => x.startsWith('drafts.') ? x : [x, 'drafts.' + x])
-    
+
   const references = await sanityClient.fetch(
     groq`*[_id in $ids] { title, translationId, _type, _id }`,
     { ids: referenceIds }
@@ -495,10 +496,10 @@ async function pointToTranslatedDocument(reference, language) {
     { ref: reference._ref }
   )
 
-  if (!referencedDoc && reference._strengthenOnPublish) 
+  if (!referencedDoc && reference._strengthenOnPublish)
     return { ...reference, _ref: uuid.v4() } // This document is created inline, but doesn't exist yet
-  
-  if (!typeHasLanguage(referencedDoc._type)) 
+
+  if (!typeHasLanguage(referencedDoc._type))
     return reference // This document is not translatable (e.g.: images)
 
   const ids = await sanityClient.fetch(
@@ -511,16 +512,16 @@ async function pointToTranslatedDocument(reference, language) {
   const isDraft = ids.every(id => id.startsWith('drafts.'))
   const [firstId] = ids
 
-  return { 
-    ...reference, 
+  return {
+    ...reference,
     _ref: firstId.replace(/^drafts\./, ''),
     // If the only translation is an unpublished draft we need to create a special reference
-    ...(isDraft && { 
-      _weak: true, 
-      _strengthenOnPublish: { 
-        _type: referencedDoc._type 
-      } 
-    }) 
+    ...(isDraft && {
+      _weak: true,
+      _strengthenOnPublish: {
+        _type: referencedDoc._type
+      }
+    })
   }
 }
 
