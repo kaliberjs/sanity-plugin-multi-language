@@ -284,7 +284,7 @@ function TranslateActions({ onClickDuplicate, onClickFresh, language, languages 
   return (
     <Flex gap={3} align='center'>
       <Button onClick={onClickFresh} icon={ComposeIcon} tone='primary' mode='ghost' text='Create empty translation' style={{ width: '100%'}} />
-      <Button onClick={onClickDuplicate} icon={DocumentsIcon} tone='primary' text={`Duplicate in ${languages[language].title.toLowerCase()}`} style={{ width: '100%'}} />
+      <Button onClick={onClickDuplicate} icon={DocumentsIcon} tone='primary' text={`Duplicate in ${languages[language].title}`} style={{ width: '100%'}} />
     </Flex>
   )
 }
