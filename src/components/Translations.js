@@ -54,6 +54,7 @@ function Translations({ document: { displayed: document, draft, published }, opt
       setUntranslatedReferenceInfo(untranslatedReferenceInfo)
     }, 
     onError: options.reportError,
+    additionalFreshTranslationProperties: options.additionalFreshTranslationProperties,
   })
   
   useOnChildDocumentDeletedHack(() => {
@@ -136,14 +137,19 @@ function useOpenDocumentInChildPane() {
   }
 }
 
-function useTranslationHandling({ onTranslationCreated, onUntranslatedReferencesFound, onError }) {
+function useTranslationHandling({ 
+  onTranslationCreated, 
+  onUntranslatedReferencesFound, 
+  additionalFreshTranslationProperties = doc => ({}), 
+  onError 
+}) {
   const client = useClient({ apiVersion })
   const schema = useSchema()
 
   return {
     async addFreshTranslation(document, language) {
       await withErrorHandling(async () => {
-        const { status, data } = await addFreshTranslation(document, language, { client })
+        const { status, data } = await addFreshTranslation(document, language, { client, additionalFreshTranslationProperties })
 
         if (status === 'success') onTranslationCreated(data)
         else throw new Error(`Failed to create fresh translation (${status})`)
@@ -422,10 +428,11 @@ function useOnChildDocumentDeletedHack(onDelete) {
   )
 }
 
-async function addFreshTranslation(original, language, { client }) {
+async function addFreshTranslation(original, language, { client, additionalFreshTranslationProperties }) {
   const duplicateId = 'drafts.' + uuid.v4()
 
   const result = await client.create({
+    ...additionalFreshTranslationProperties(original),
     _type: original._type, _id: duplicateId, translationId: original.translationId, language
   })
 
