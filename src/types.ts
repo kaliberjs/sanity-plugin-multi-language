@@ -9,6 +9,7 @@ export type Config = {
     },
     defaultLanguage: string,
   },
+  additionalFreshTranslationProperties?(doc: any): Object,
   getDefaultLanguage?(params: {
     sanityClient: import('sanity').SanityClient,
     currentUser: import('sanity').CurrentUser,
