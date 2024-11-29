@@ -2,7 +2,7 @@ import React from 'react'
 import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as uuid from 'uuid'
 import groq from 'groq'
-import { useEditState, useSchema, useClient, Preview as SanityPreview, SanityClient } from 'sanity'
+import { useEditState, useSchema, useClient, Preview as SanityPreview } from 'sanity'
 import { useRouter } from 'sanity/router'
 import { usePaneRouter } from 'sanity/desk'
 import { Container, Stack, Flex, Box, Inline, Card, Dialog, Grid, Text, Spinner, Button, Tooltip } from '@sanity/ui'
@@ -32,12 +32,12 @@ function TranslationsWithQueryClient({ document, options }) {
 function Translations({ document: { displayed: document, draft, published }, options }) {
   const translationId = document?.translationId
 
-  const { translations, isLoading, isSuccess, isError, reloadTranslations } = 
+  const { translations, isLoading, isSuccess, isError, reloadTranslations } =
     useTranslations({ translationId, options })
-  
-  const [untranslatedReferenceInfo, setUntranslatedReferenceInfo] = 
+
+  const [untranslatedReferenceInfo, setUntranslatedReferenceInfo] =
     React.useState(/** @type {UntranslatedReferenceInfo | null} */ (null))
-  
+
   const openDocumentInChildPane = useOpenDocumentInChildPane()
   const closeChildPanes = useCloseChildPanes()
 
@@ -48,15 +48,15 @@ function Translations({ document: { displayed: document, draft, published }, opt
   } = useTranslationHandling({
     onTranslationCreated(document) {
       reloadTranslations()
-      openDocumentInChildPane(document)  
-    }, 
+      openDocumentInChildPane(document)
+    },
     onUntranslatedReferencesFound(untranslatedReferenceInfo) {
       setUntranslatedReferenceInfo(untranslatedReferenceInfo)
-    }, 
+    },
     onError: options.reportError,
     additionalFreshTranslationProperties: options.additionalFreshTranslationProperties,
   })
-  
+
   useOnChildDocumentDeletedHack(() => {
     closeChildPanes()
     reloadTranslations()
@@ -137,11 +137,11 @@ function useOpenDocumentInChildPane() {
   }
 }
 
-function useTranslationHandling({ 
-  onTranslationCreated, 
-  onUntranslatedReferencesFound, 
-  additionalFreshTranslationProperties = doc => ({}), 
-  onError 
+function useTranslationHandling({
+  onTranslationCreated,
+  onUntranslatedReferencesFound,
+  additionalFreshTranslationProperties = doc => ({}),
+  onError
 }) {
   const client = useClient({ apiVersion })
   const schema = useSchema()
@@ -158,7 +158,7 @@ function useTranslationHandling({
     async addDuplicateTranslation(document, language) {
       await withErrorHandling(async () => {
         const { status, data } = await addDuplicatedTranslation(document, language, { client, schema })
-        
+
         if (status === 'success') onTranslationCreated(data)
         else if (status === 'untranslatedReferencesFound') onUntranslatedReferencesFound(data)
         else throw new Error(`Failed to create duplicate translation (${status})`)
@@ -204,10 +204,10 @@ function useTranslations({ translationId, options }) {
         groq`*[translationId == $translationId]`,
         { translationId }
       )
-      
+
       return Object.fromEntries(
         translations.map(translation => [
-          translation.language ?? options.multiLanguage.defaultLanguage, 
+          translation.language ?? options.multiLanguage.defaultLanguage,
           translation
         ])
       )
@@ -463,7 +463,7 @@ async function addDuplicatedTranslation( original, language, { client,schema }) 
   }
 }
 
-/** @param {{ client: SanityClient, original: any, language: string, schema:any }} props */
+/** @param {{ client: import('sanity').SanityClient, original: any, language: string, schema:any }} props */
 async function createDuplicateTranslation({ client, original, language, schema }) {
   const { _id, _createdAt, _rev, _updatedAt, ...document } = original
   const { translationId } = document
@@ -519,12 +519,12 @@ function getReferences(data) {
 }
 
 async function cloneAndPointReferencesToTranslatedDocument(data, language, { client, schema }) {
-  if (!data || typeof data !== 'object') 
+  if (!data || typeof data !== 'object')
     return data
 
-  if (isReference(data)) 
+  if (isReference(data))
     return pointToTranslatedDocument(data, language, { client, schema })
-  
+
   if (Array.isArray(data))
     return Promise.all(data.map(x => cloneAndPointReferencesToTranslatedDocument(x, language, { client, schema })))
 
@@ -540,10 +540,10 @@ async function pointToTranslatedDocument(reference, language, { client, schema }
     { ref: reference._ref }
   )
 
-  if (!referencedDoc && reference._strengthenOnPublish) 
+  if (!referencedDoc && reference._strengthenOnPublish)
     return { ...reference, _ref: uuid.v4() } // This document is created inline, but doesn't exist yet
-  
-  if (!typeHasLanguage({ schema, schemaType: referencedDoc._type })) 
+
+  if (!typeHasLanguage({ schema, schemaType: referencedDoc._type }))
     return reference // This document is not translatable (e.g.: images)
 
   const ids = await client.fetch(
@@ -556,16 +556,16 @@ async function pointToTranslatedDocument(reference, language, { client, schema }
   const isDraft = ids.every(id => id.startsWith('drafts.'))
   const [firstId] = ids
 
-  return { 
-    ...reference, 
+  return {
+    ...reference,
     _ref: firstId.replace(/^drafts\./, ''),
     // If the only translation is an unpublished draft we need to create a special reference
-    ...(isDraft && { 
-      _weak: true, 
-      _strengthenOnPublish: { 
-        _type: referencedDoc._type 
-      } 
-    }) 
+    ...(isDraft && {
+      _weak: true,
+      _strengthenOnPublish: {
+        _type: referencedDoc._type
+      }
+    })
   }
 }
 
