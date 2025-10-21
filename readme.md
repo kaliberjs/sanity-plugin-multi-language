@@ -27,7 +27,7 @@ defineConfig({
             .component(Translations)
             .options({ multiLanguage, reportError })
             .title('Translations'),
-          
+
         ].filter(Boolean)
 
         return S.document().views(views)
@@ -61,6 +61,36 @@ export const page = {
 }
 ```
 
+### Custom Document ID Generator
+
+By default, new translations are created with a random UUID (`drafts.{uuid}`). You can customize this behavior by providing a `multiLanguageNewDocumentId` function in your schema options:
+```js
+export const page = {
+  type: 'document',
+  name: 'page',
+  title: 'Page',
+  options: {
+    kaliber: {
+      multiLanguage: true,
+      multiLanguageNewDocumentId: ({ currentId, currentLanguage, newLanguage }) => {
+        // Example: Replace language code in the document ID
+        return currentId.replace(currentLanguage, newLanguage)
+      }
+    }
+  },
+  ...
+}
+```
+
+**Parameters:**
+- `currentId` - The ID of the source document
+- `currentLanguage` - The language code of the source document
+- `newLanguage` - The language code for the new translation
+
+**Returns:** A string to be used as the new document ID
+
+This is useful when you want predictable IDs based on language codes, making it easier to find related translations programmatically.
+
 ### Config
 _config.multiLanguage_
 ```js
@@ -93,7 +123,7 @@ In this plugin:
 
 In your project:
 ```
-> yarn link @kaliber/sanity-plugin-multi-language 
+> yarn link @kaliber/sanity-plugin-multi-language
 ```
 
 ## Publish

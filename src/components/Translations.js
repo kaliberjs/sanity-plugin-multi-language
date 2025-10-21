@@ -149,7 +149,7 @@ function useTranslationHandling({
   return {
     async addFreshTranslation(document, language) {
       await withErrorHandling(async () => {
-        const { status, data } = await addFreshTranslation(document, language, { client, additionalFreshTranslationProperties })
+        const { status, data } = await addFreshTranslation(document, language, { client, additionalFreshTranslationProperties, schema })
 
         if (status === 'success') onTranslationCreated(data)
         else throw new Error(`Failed to create fresh translation (${status})`)
@@ -428,8 +428,8 @@ function useOnChildDocumentDeletedHack(onDelete) {
   )
 }
 
-async function addFreshTranslation(original, language, { client, additionalFreshTranslationProperties }) {
-  const duplicateId = 'drafts.' + uuid.v4()
+async function addFreshTranslation(original, language, { client, additionalFreshTranslationProperties, schema }) {
+  const duplicateId = generateNewDocumentId(original, language, { schema })
 
   const result = await client.create({
     ...additionalFreshTranslationProperties(original),
@@ -472,7 +472,7 @@ async function createDuplicateTranslation({ client, original, language, schema }
     client.patch(_id).setIfMissing({ translationId }).commit(), // TODO: kan dit echt gebeuren? misschien als we van untranslated naar translated zouden gaan, is denk ik niet de bedoeling
     client.create({
       ...(await cloneAndPointReferencesToTranslatedDocument(document, language, { client, schema })),
-      _id: 'drafts.' + uuid.v4(),
+      _id: generateNewDocumentId(original, language, { schema }),
       translationId,
       language
     })
@@ -509,6 +509,13 @@ async function findUntranslatedReferences(document, language, { client, schema }
   ).filter(Boolean)
 
   return untranslatedReferences
+}
+
+function generateNewDocumentId(doc, language, { schema }) {
+  const customIdGenerator = schema.get(doc._type)?.options?.kaliber?.multiLanguageNewDocumentId
+  return customIdGenerator
+    ? customIdGenerator({ currentId: doc._id, currentLanguage: doc?.language, newLanguage: language })
+    : 'drafts.' + uuid.v4()
 }
 
 function getReferences(data) {
