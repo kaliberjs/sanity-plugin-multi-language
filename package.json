@@ -35,7 +35,5 @@
     "sanity": "^3.65.1",
     "uuid": "^11.0.3"
   },
-  "devDependencies": {
-    "@kaliber/build": "^0.0.144"
-  }
+  "devDependencies": {}
 }
