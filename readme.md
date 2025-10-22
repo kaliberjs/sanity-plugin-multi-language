@@ -74,7 +74,7 @@ export const page = {
       multiLanguage: true,
       multiLanguageNewDocumentId: ({ currentId, currentLanguage, newLanguage }) => {
         // Example: Replace language code in the document ID
-        return currentId.replace(currentLanguage, newLanguage)
+        return currentId.replace(new RegExp(`_${currentLanguage}$`), `_${newLanguage}`)
       }
     }
   },
