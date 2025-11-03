@@ -13,7 +13,6 @@ export function addFields(config) {
       throw new Error(`Your '${type.name}' schema already contains a \`language\` or \`translationId\` field. Remove these fields before enabling multiLanguage.`)
     }
 
-    // Collect names of fields that should be synced
     const syncFieldNames = (type.fields ?? [])
       .filter(f => f.syncAcrossTranslations)
       .map(f => f.name)
@@ -61,12 +60,12 @@ export function addFields(config) {
           },
         },
         ...(type.fields ?? []).map(field =>
-          field.syncAcrossTranslations
+          shouldWrapFieldWithSync(field)
             ? {
                 ...field,
                 components: {
                   ...field.components,
-                  field: createSyncFieldWrapper(field.components?.field)
+                  field: createSyncFieldWrapper(field.components.field)
                 }
               }
             : field
@@ -74,6 +73,10 @@ export function addFields(config) {
       ]
     }
   }
+}
+
+function shouldWrapFieldWithSync(field) {
+  return field.syncAcrossTranslations && field.components?.field
 }
 
 async function getParentRefLanguageHack(client) {
