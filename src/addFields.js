@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid'
 import { createLanguageFieldComponent } from './components/Language'
+import { createSyncFieldWrapper } from './components/SyncFieldWrapper'
 import apiVersion from './apiVersion'
 
 /** @param {import('./types').Config} config */
@@ -12,8 +13,20 @@ export function addFields(config) {
       throw new Error(`Your '${type.name}' schema already contains a \`language\` or \`translationId\` field. Remove these fields before enabling multiLanguage.`)
     }
 
+    // Collect names of fields that should be synced
+    const syncFieldNames = (type.fields ?? [])
+      .filter(f => f.syncAcrossTranslations)
+      .map(f => f.name)
+
     return {
       ...type,
+      options: {
+        ...type.options,
+        kaliber: {
+          ...type.options?.kaliber,
+          syncFieldNames
+        }
+      },
       fields: [
         {
           title: 'Taal',
@@ -47,7 +60,17 @@ export function addFields(config) {
             }
           },
         },
-        ...type.fields ?? []
+        ...(type.fields ?? []).map(field =>
+          field.syncAcrossTranslations
+            ? {
+                ...field,
+                components: {
+                  ...field.components,
+                  field: createSyncFieldWrapper(field.components?.field)
+                }
+              }
+            : field
+        )
       ]
     }
   }
