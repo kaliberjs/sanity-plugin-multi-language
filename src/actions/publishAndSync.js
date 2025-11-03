@@ -12,7 +12,7 @@ export function publishAndSyncAction(props) {
   const { type, id, draft } = props
   const operation = useDocumentOperation(id, type)
   const schema = useSchema()
-  const client = useClient(apiVersion)
+  const client = useClient({apiVersion})
   const schemaType = schema.get(type)
   const syncFieldNames = schemaType?.options?.kaliber?.syncFieldNames ?? []
 
