@@ -1,8 +1,15 @@
 import { useDocumentOperation, useSchema, useClient } from 'sanity'
 import apiVersion from '../apiVersion'
 
-export function publishAndSyncAction(props) {
-  const { type, id, draft } = props
+/**
+ * Creates a custom document action for publishing and syncing fields across translation siblings
+ * @param {Object} params - Action parameters
+ * @param {string} params.type - Document type
+ * @param {string} params.id - Document ID
+ * @param {Object} params.draft - Draft document with translationId, language, and sync fields
+ * @returns {Object|null} Action object with label, onHandle, and disabled properties, or null if no sync fields configured
+ */
+export function publishAndSyncAction({ id, type, draft }) {
   const operation = useDocumentOperation(id, type)
   const schema = useSchema()
   const client = useClient({apiVersion})
