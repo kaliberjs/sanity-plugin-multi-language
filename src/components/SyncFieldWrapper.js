@@ -4,15 +4,15 @@ import { SyncIcon } from '@sanity/icons'
 
 /**
  * Create a field wrapper that adds the sync indicator
- * @param {React.ComponentType} BaseFieldComponent - The original field component
- * @returns {React.ComponentType} Wrapped field component with sync indicator
+ * @param {React.ComponentType} BaseComponent - The input component to wrap
+ * @returns {React.ComponentType} Wrapped component with sync indicator
  */
-export function createSyncFieldWrapper(BaseFieldComponent) {
+export function createSyncFieldWrapper(BaseComponent) {
   return function SyncFieldWrapper(props) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div style={{ flex: 1 }}>
-          <BaseFieldComponent {...props} />
+          <BaseComponent {...props} />
         </div>
         <SyncFieldIndicator />
       </div>

@@ -13,9 +13,20 @@ export function addFields(config) {
       throw new Error(`Your '${type.name}' schema already contains a \`language\` or \`translationId\` field. Remove these fields before enabling multiLanguage.`)
     }
 
-    const syncFieldNames = (type.fields ?? [])
-      .filter(f => f.syncAcrossTranslations)
-      .map(f => f.name)
+    const syncFieldNames = []
+    const transformedFields = (type.fields ?? []).map(field => {
+      if (field.options?.syncAcrossTranslations) {
+        syncFieldNames.push(field.name)
+        return {
+          ...field,
+          components: {
+            ...field.components,
+            input: createSyncFieldWrapper(field.components?.input)
+          }
+        }
+      }
+      return field
+    })
 
     return {
       ...type,
@@ -59,25 +70,12 @@ export function addFields(config) {
             }
           },
         },
-        ...(type.fields ?? []).map(field =>
-          shouldWrapFieldWithSync(field)
-            ? {
-                ...field,
-                components: {
-                  ...field.components,
-                  field: createSyncFieldWrapper(field.components.field)
-                }
-              }
-            : field
-        )
+        ...transformedFields
       ]
     }
   }
 }
 
-function shouldWrapFieldWithSync(field) {
-  return field.syncAcrossTranslations && field.components?.field
-}
 
 async function getParentRefLanguageHack(client) {
   const segments = decodeURIComponent(window.location.pathname).split(';')
