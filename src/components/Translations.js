@@ -1,10 +1,9 @@
-import React from 'react'
 import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import * as uuid from 'uuid'
+import * as uuid from 'uuid' // eslint-disable-line import/no-unresolved
 import groq from 'groq'
 import { useEditState, useSchema, useClient, Preview as SanityPreview } from 'sanity'
-import { useRouter } from 'sanity/router'
-import { usePaneRouter } from 'sanity/desk'
+import { useRouter } from 'sanity/router' // eslint-disable-line import/no-unresolved
+import { usePaneRouter } from 'sanity/structure' // eslint-disable-line import/no-unresolved
 import { Container, Stack, Flex, Box, Inline, Card, Dialog, Grid, Text, Spinner, Button, Tooltip } from '@sanity/ui'
 import { DocumentsIcon, ComposeIcon, EditIcon, PublishIcon } from '@sanity/icons'
 import { Flag } from './Flag'
@@ -91,7 +90,8 @@ function Translations({ document: { displayed: document, draft, published }, opt
 
         {isSuccess && (
           (published || draft)
-            ? <Languages
+            ? (
+              <Languages
                 original={document}
                 languages={options.multiLanguage.languages}
                 {...{ translations }}
@@ -102,6 +102,7 @@ function Translations({ document: { displayed: document, draft, published }, opt
                   addDuplicateTranslation(document, language)
                 }}
               />
+            )
             : <Text>It seems there isn't anything to translate yet!</Text>
         )}
       </Stack>
@@ -228,7 +229,7 @@ function useCloseChildPanes() {
 
 function Languages({ original, translations, languages, onTranslateFresh, onTranslateDuplicate }) {
   return (
-    <ul className={styles.languages}>
+    <ul className={styles.componentLanguages}>
       {Object.keys(languages)
         .filter(x => x !== original.language)
         .map(language => {
@@ -245,7 +246,7 @@ function Languages({ original, translations, languages, onTranslateFresh, onTran
                 </EditLink>
               ) : (
                 <TranslateActions
-                  {...{ language, languages } }
+                  {...{ language, languages }}
                   onClickDuplicate={() => onTranslateDuplicate(language)}
                   onClickFresh={() => onTranslateFresh(language)}
                 />
@@ -289,8 +290,8 @@ function EditLink({ document, children }) {
 function TranslateActions({ onClickDuplicate, onClickFresh, language, languages }) {
   return (
     <Flex gap={3} align='center'>
-      <Button onClick={onClickFresh} icon={ComposeIcon} tone='primary' mode='ghost' text='Create empty translation' style={{ width: '100%'}} />
-      <Button onClick={onClickDuplicate} icon={DocumentsIcon} tone='primary' text={`Duplicate in ${languages[language].title}`} style={{ width: '100%'}} />
+      <Button onClick={onClickFresh} icon={ComposeIcon} tone='primary' mode='ghost' text='Create empty translation' style={{ width: '100%' }} />
+      <Button onClick={onClickDuplicate} icon={DocumentsIcon} tone='primary' text={`Duplicate in ${languages[language].title}`} style={{ width: '100%' }} />
     </Flex>
   )
 }
@@ -336,7 +337,7 @@ function MissingTranslationsDialog({ documents, onClose, onContinue }) {
 
 function Preview({ document }) {
   const schema = useSchema()
-  const schemaType = React.useMemo(() => schema.get(document._type), [document._type])
+  const schemaType = React.useMemo(() => schema.get(document._type), [schema, document._type])
   const editState = useEditState(document._id.replace(/^drafts\./, ''), document._type)
   const { published, draft } = editState ?? {}
 
@@ -362,7 +363,7 @@ function Preview({ document }) {
   )
 }
 
-function StatusPublished ({ published }) {
+function StatusPublished({ published }) {
   return (
     <StatusBase
       tooltip={published ? 'Published' : 'Not published'}
@@ -398,9 +399,10 @@ function StatusBase({ tooltip, tone, dimmed, icon: Icon }) {
       placement="top"
       portal
     >
+      {/* eslint-disable-next-line @kaliber/layout-class-name */}
       <Card className={styles.iconCard} data-dimmed={dimmed} style={{ background: 'transparent' }} {...{ tone }}>
         <Text size={1}>
-          <Icon/>
+          <Icon />
         </Text>
       </Card>
     </Tooltip>
@@ -439,7 +441,7 @@ async function addFreshTranslation(original, language, { client, additionalFresh
   return { status: 'success', data: result }
 }
 
-async function addDuplicatedTranslation( original, language, { client,schema }) {
+async function addDuplicatedTranslation( original, language, { client, schema }) {
   const untranslatedReferences = await findUntranslatedReferences(original, language, { client, schema })
 
   if (untranslatedReferences.length) return untranslatedReferencesFound(untranslatedReferences)
@@ -591,7 +593,7 @@ async function mapValuesAsync(obj, asyncMapFn) {
 
 function mapValues(o, f) {
   return Object.entries(o).reduce(
-    (result, [k, v]) => (result[k] = f(v, k, o), result),
+    (result, [k, v]) => (result[k] = f(v, k, o), result), // eslint-disable-line no-return-assign
     {}
   )
 }

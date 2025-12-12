@@ -12,7 +12,7 @@ export function createLanguageFieldComponent(config) {
 /** @param {{ value:string, languages: import('../types').Config['multiLanguage']['languages']}} props */
 export function Language({ value = '', languages }) {
   if (!value) return <NoLanguagePresent />
-    
+
   const { icu, title } = languages[value]
 
   return (
@@ -31,4 +31,4 @@ function NoLanguagePresent() {
       <Text>This is not right, this document doesn't have a language associated with it.</Text>
     </Card>
   )
-} 
+}

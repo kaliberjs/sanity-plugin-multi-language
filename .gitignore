@@ -1,3 +1,2 @@
 node_modules/
-ts/
-yarn.lock
+typescript/package.json

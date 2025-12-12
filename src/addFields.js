@@ -1,4 +1,4 @@
-import { v4 as uuid } from 'uuid'
+import { v4 as uuid } from 'uuid' // eslint-disable-line import/no-unresolved
 import { createLanguageFieldComponent } from './components/Language'
 import apiVersion from './apiVersion'
 
