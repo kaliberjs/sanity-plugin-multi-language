@@ -1,3 +1,5 @@
+import type { SanityClient, CurrentUser, Schema } from 'sanity'
+
 export type Config = {
   reportError(error: any): void,
   multiLanguage: {
@@ -11,8 +13,11 @@ export type Config = {
   },
   additionalFreshTranslationProperties?(doc: any): Object,
   getDefaultLanguage?(params: {
-    sanityClient: import('sanity').SanityClient,
-    currentUser: import('sanity').CurrentUser,
-    schema: import('sanity').Schema
+    sanityClient: SanityClient,
+    currentUser: CurrentUser | null,
+    schema: Schema
   }): Promise<string>
 }
+
+export type ArrayItem<T> =
+  T extends (infer X)[] ? X : never

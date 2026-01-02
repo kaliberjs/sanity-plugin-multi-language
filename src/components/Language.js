@@ -1,15 +1,17 @@
 import { Flex, Card, Text } from '@sanity/ui'
 import { Flag } from './Flag'
 import { getCountryFromIcu } from '../machinery/getCountryFromIcu'
+/** @import { Config } from '../types.ts' */
 
-/** @param {import('../types').Config} config */
+/** @arg {Config} config */
 export function createLanguageFieldComponent(config) {
+  /** @arg {Omit<Parameters<typeof Language>[0], 'languages'>} props */
   return function LanguageFieldComponent(props) {
     return <Language {...props} languages={config.multiLanguage.languages} />
   }
 }
 
-/** @param {{ value:string, languages: import('../types').Config['multiLanguage']['languages']}} props */
+/** @arg {{ value:string, languages: Config['multiLanguage']['languages']}} props */
 export function Language({ value = '', languages }) {
   if (!value) return <NoLanguagePresent />
 

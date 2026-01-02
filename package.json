@@ -15,6 +15,7 @@
     "package.json",
     "readme.md"
   ],
+  "type": "module",
   "publishConfig": {
     "access": "public"
   },

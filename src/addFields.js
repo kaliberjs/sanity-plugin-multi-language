@@ -1,18 +1,35 @@
 import { v4 as uuid } from 'uuid' // eslint-disable-line import/no-unresolved
 import { createLanguageFieldComponent } from './components/Language'
 import apiVersion from './apiVersion'
+/** @import { SchemaTypeDefinition, Schema, InitialValueResolverContext, ConditionalPropertyCallbackContext, SanityClient } from 'sanity' */
+/** @import { Config } from './types.ts' */
 
-/** @param {import('./types').Config} config */
+/** @param {Config} config */
 export function addFields(config) {
   const languageCount = Object.values(config.multiLanguage.languages ?? {}).length
 
+  /**
+   * @template {(
+   *   {
+   *     name: string,
+   *     options?: {
+   *       kaliber?: {
+   *         multiLanguage: boolean
+   *       }
+   *     },
+   *     fields: Array<{ name?: string }>,
+   *   } &
+   *   SchemaTypeDefinition
+   * )} T
+   * @arg {T & Schema} type
+   */
   return type => {
     if (!type.options?.kaliber?.multiLanguage) return type
-    if (type.fields.some(x => ['language', 'translationId'].includes(x.name))) {
+    if (type.fields.some(x => ['language', 'translationId'].includes(x.name || ''))) {
       throw new Error(`Your '${type.name}' schema already contains a \`language\` or \`translationId\` field. Remove these fields before enabling multiLanguage.`)
     }
 
-    return {
+    return /** @type const */ ({
       ...type,
       fields: [
         {
@@ -24,6 +41,10 @@ export function addFields(config) {
             field: createLanguageFieldComponent(config)
           },
           hidden: languageCount <= 1,
+          /**
+           * @arg {any} _
+           * @arg {InitialValueResolverContext} context
+           */
           initialValue: async (_, context) => {
             const client = context.getClient({ apiVersion })
             return (
@@ -39,7 +60,8 @@ export function addFields(config) {
           type: 'string',
           of: [{ type: 'string' }],
           readOnly: true,
-          hidden: ({ currentUser }) => !currentUser.roles.some((x) => x.name === 'administrator'),
+          /** @arg {ConditionalPropertyCallbackContext} context */
+          hidden: ({ currentUser }) => !currentUser?.roles.some((x) => x.name === 'administrator'),
           initialValue: () => uuid(),
           options: {
             kaliber: {
@@ -49,10 +71,11 @@ export function addFields(config) {
         },
         ...type.fields ?? []
       ]
-    }
+    })
   }
 }
 
+/** @arg {SanityClient} client */
 async function getParentRefLanguageHack(client) {
   const segments = decodeURIComponent(window.location.pathname).split(';')
   if (segments.length === 1) return

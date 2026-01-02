@@ -13,13 +13,26 @@ import apiVersion from '../apiVersion'
 
 import styles from './Translations.css'
 
+/** @import { Config, ArrayItem } from '../types.ts' */
+/** @import { SanityDocument, SanityClient, Schema } from 'sanity' */
+/** @import { CardTone } from '@sanity/ui' */
+/** @import { ReactNode } from 'react' */
+
 /** @typedef {{ references: any, cleanDuplicate: any, language: string }} UntranslatedReferenceInfo */
+/**
+ * @typedef {{
+ *   displayed: MultiLanguageDocument,
+ *   draft: MultiLanguageDocument,
+ *   published: MultiLanguageDocument
+ * }} SanityDocumentContainer
+ */
+/** @typedef {SanityDocument & { translationId: string, language: string }} MultiLanguageDocument */
 
 export { TranslationsWithQueryClient as Translations }
 
 const queryClient = new QueryClient()
 
-/** @param {{ document: any, options: import('../types').Config }} props */
+/** @arg {{ document: SanityDocumentContainer, options: Config }} props */
 function TranslationsWithQueryClient({ document, options }) {
   return (
     <QueryClientProvider client={queryClient}>
@@ -28,10 +41,16 @@ function TranslationsWithQueryClient({ document, options }) {
   )
 }
 
+/**
+ * @arg {{
+ *   document: SanityDocumentContainer,
+ *   options: Config,
+ * }} props
+ */
 function Translations({ document: { displayed: document, draft, published }, options }) {
   const translationId = document?.translationId
 
-  const { translations, isLoading, isSuccess, isError, reloadTranslations } =
+  const { translations, isPending, isSuccess, isError, reloadTranslations } =
     useTranslations({ translationId, options })
 
   const [untranslatedReferenceInfo, setUntranslatedReferenceInfo] =
@@ -72,7 +91,7 @@ function Translations({ document: { displayed: document, draft, published }, opt
       <Stack space={2}>
         <Text weight='semibold'>Translations</Text>
 
-        {isLoading && (
+        {isPending && (
           <Flex justify="center">
             <Spinner muted />
           </Flex>
@@ -128,6 +147,7 @@ function useOpenDocumentInChildPane() {
   const paneRouter = usePaneRouter()
   const router = useRouter()
 
+  /** @arg {SanityDocument} document */
   return document => {
     router.navigate({
       panes: [
@@ -138,6 +158,23 @@ function useOpenDocumentInChildPane() {
   }
 }
 
+/**
+ * @arg {{
+ *   onTranslationCreated(data: MultiLanguageDocument): void,
+ *   onUntranslatedReferencesFound(data: {
+ *     references: {
+ *         title: string,
+ *         translationId: string,
+ *         _type: string,
+ *         _id: string,
+ *     }[],
+ *     cleanDuplicate: void | MultiLanguageDocument,
+ *     language: string
+ *   }): void,
+ *   additionalFreshTranslationProperties?(doc: SanityDocument): Record<string, any>,
+ *   onError(e: unknown): void,
+ * }} props
+ */
 function useTranslationHandling({
   onTranslationCreated,
   onUntranslatedReferencesFound,
@@ -148,6 +185,10 @@ function useTranslationHandling({
   const schema = useSchema()
 
   return {
+    /**
+     * @arg {SanityDocument} document
+     * @arg {string} language
+     */
     async addFreshTranslation(document, language) {
       await withErrorHandling(async () => {
         const { status, data } = await addFreshTranslation(document, language, { client, additionalFreshTranslationProperties, schema })
@@ -156,6 +197,10 @@ function useTranslationHandling({
         else throw new Error(`Failed to create fresh translation (${status})`)
       })
     },
+    /**
+     * @arg {MultiLanguageDocument} document
+     * @arg {string} language
+     */
     async addDuplicateTranslation(document, language) {
       await withErrorHandling(async () => {
         const { status, data } = await addDuplicatedTranslation(document, language, { client, schema })
@@ -165,6 +210,10 @@ function useTranslationHandling({
         else throw new Error(`Failed to create duplicate translation (${status})`)
       })
     },
+    /**
+     * @arg {MultiLanguageDocument} document
+     * @arg {string} language
+     */
     async addDuplicateTranslationsWithoutReferences(document, language) {
       await withErrorHandling(async () => {
         const { status, data } = await addDuplicatedTranslation(document, language, { client, schema })
@@ -175,11 +224,13 @@ function useTranslationHandling({
     }
   }
 
+  /** @arg {() => void} f */
   async function withErrorHandling(f) {
     try { return f() } catch (e) { onError(e) }
   }
 }
 
+/** @arg {{ translationId: unknown, options: Config }} props */
 function useTranslations({ translationId, options }) {
   const client = useClient({ apiVersion })
   const queryClient = useQueryClient()
@@ -189,9 +240,9 @@ function useTranslations({ translationId, options }) {
     queryKey: ['translations', { translationId }],
     queryFn: () => getTranslations({ reportError }),
     enabled: Boolean(translationId),
-    initialData: [],
+    initialData: {},
   })
-  const translations = data ?? []
+  const translations = data ?? {}
 
   return { translations, isPending, isSuccess, isError, reloadTranslations }
 
@@ -199,12 +250,13 @@ function useTranslations({ translationId, options }) {
     queryClient.invalidateQueries(({ queryKey: ['translations'] }))
   }
 
+  /** @arg {{ reportError: (e: unknown) => void }} props */
   async function getTranslations({ reportError }) {
     try {
-      const translations = await client.fetch(
+      const translations = /** @type {MultiLanguageDocument[]} */ (await client.fetch(
         groq`*[translationId == $translationId]`,
         { translationId }
-      )
+      ))
 
       return Object.fromEntries(
         translations.map(translation => [
@@ -227,6 +279,15 @@ function useCloseChildPanes() {
   }
 }
 
+/**
+ * @arg {{
+ *   original: MultiLanguageDocument,
+ *   translations: Record<string, SanityDocument>,
+ *   languages: Config['multiLanguage']['languages'],
+ *   onTranslateFresh: (language: string) => void,
+ *   onTranslateDuplicate: (language: string) => void,
+ * }} props
+ */
 function Languages({ original, translations, languages, onTranslateFresh, onTranslateDuplicate }) {
   return (
     <ul className={styles.componentLanguages}>
@@ -259,6 +320,7 @@ function Languages({ original, translations, languages, onTranslateFresh, onTran
   )
 }
 
+/** @arg {{ country: string, title: string, children: ReactNode }} props */
 function Language({ country, title, children }) {
   return (
     <Stack as='li' space={2}>
@@ -277,16 +339,31 @@ function Language({ country, title, children }) {
   )
 }
 
+/** @arg {{ document: SanityDocument, children: ReactNode }} props */
 function EditLink({ document, children }) {
   const { ChildLink } = usePaneRouter()
 
   return (
-    <ChildLink key={document._id} childId={document._id} childParameters={{ type: document._type }} style={{ color: 'inherit', textDecoration: 'none' }}>
+    <ChildLink
+      key={document._id}
+      childId={document._id}
+      childParameters={{ type: document._type }}
+      // @ts-expect-error
+      style={{ color: 'inherit', textDecoration: 'none' }}
+    >
       {children}
     </ChildLink>
   )
 }
 
+/**
+ * @arg {{
+ *   onClickDuplicate: () => void,
+ *   onClickFresh: () => void,
+ *   language: string,
+ *   languages: Config['multiLanguage']['languages'],
+ * }} props
+ */
 function TranslateActions({ onClickDuplicate, onClickFresh, language, languages }) {
   return (
     <Flex gap={3} align='center'>
@@ -296,6 +373,13 @@ function TranslateActions({ onClickDuplicate, onClickFresh, language, languages 
   )
 }
 
+/**
+ * @arg {{
+ *   documents: SanityDocument[],
+ *   onClose: () => void,
+ *   onContinue: () => void,
+ * }} props
+ */
 function MissingTranslationsDialog({ documents, onClose, onContinue }) {
   return (
     <Dialog
@@ -335,11 +419,15 @@ function MissingTranslationsDialog({ documents, onClose, onContinue }) {
   )
 }
 
+/** @arg {{ document: SanityDocument }} props */
 function Preview({ document }) {
   const schema = useSchema()
   const schemaType = React.useMemo(() => schema.get(document._type), [schema, document._type])
   const editState = useEditState(document._id.replace(/^drafts\./, ''), document._type)
   const { published, draft } = editState ?? {}
+
+  if (!schemaType)
+    throw new Error(`No schema found for document:\n${JSON.stringify(document, null, 2)}`)
 
   return (
     <Card
@@ -354,8 +442,8 @@ function Preview({ document }) {
         </Box>
         <Box>
           <Inline space={4}>
-            <StatusPublished {...{ published }} />
-            <StatusEdited edited={draft} />
+            <StatusPublished published={Boolean(published)} />
+            <StatusEdited edited={Boolean(draft)} />
           </Inline>
         </Box>
       </Flex>
@@ -363,6 +451,7 @@ function Preview({ document }) {
   )
 }
 
+/** @arg {{ published: boolean }} props */
 function StatusPublished({ published }) {
   return (
     <StatusBase
@@ -374,6 +463,7 @@ function StatusPublished({ published }) {
   )
 }
 
+/** @arg {{ edited: boolean }} props */
 function StatusEdited({ edited }) {
   return (
     <StatusBase
@@ -385,6 +475,14 @@ function StatusEdited({ edited }) {
   )
 }
 
+/**
+ * @arg {{
+ *   tooltip: string,
+ *   tone: CardTone,
+ *   icon: JSX.ElementType,
+ *   dimmed: boolean,
+ * }} props
+ */
 function StatusBase({ tooltip, tone, dimmed, icon: Icon }) {
   return (
     <Tooltip
@@ -409,6 +507,7 @@ function StatusBase({ tooltip, tone, dimmed, icon: Icon }) {
   )
 }
 
+/** @arg {() => void} onDelete */
 function useOnChildDocumentDeletedHack(onDelete) {
   const paneRouter = usePaneRouter()
   const onDeleteRef = React.useRef(onDelete)
@@ -430,42 +529,77 @@ function useOnChildDocumentDeletedHack(onDelete) {
   )
 }
 
+/**
+ * @arg {SanityDocument} original
+ * @arg {string} language
+ * @arg {{
+ *   client: SanityClient,
+ *   additionalFreshTranslationProperties(original: SanityDocument): Record<string, any>,
+ *   schema: Schema,
+ * }} config
+ */
 async function addFreshTranslation(original, language, { client, additionalFreshTranslationProperties, schema }) {
   const duplicateId = generateNewDocumentId(original, language, { schema })
 
   const result = await client.create({
     ...additionalFreshTranslationProperties(original),
-    _type: original._type, _id: duplicateId, translationId: original.translationId, language
+    _type: original._type, _id: duplicateId, translationId: /** @type {string} */ (original.translationId), language
   })
 
   return { status: 'success', data: result }
 }
 
+/**
+ * @arg {MultiLanguageDocument} original
+ * @arg {string} language
+ * @arg {{
+ *   client: SanityClient,
+ *   schema: Schema,
+ * }} config
+ */
 async function addDuplicatedTranslation( original, language, { client, schema }) {
   const untranslatedReferences = await findUntranslatedReferences(original, language, { client, schema })
 
   if (untranslatedReferences.length) return untranslatedReferencesFound(untranslatedReferences)
 
-  return {
+  return /** @type const */ ({
     status: 'success',
     data: await createDuplicateTranslation({ client, original, language, schema })
-  }
+  })
 
+  /**
+   * @arg {{
+   *   title: string;
+   *   translationId: string;
+   *   _type: string;
+   *   _id: string;
+   * }[]} untranslatedReferences
+  */
   async function untranslatedReferencesFound(untranslatedReferences) {
-    const duplicate = removeExcludedReferences(original, untranslatedReferences.map(x => x._id))
+    const duplicate = /** @type {void | MultiLanguageDocument} */ (
+      removeExcludedReferences(original, untranslatedReferences.map(x => x._id))
+    )
 
-    return {
+    return /** @type const */ ({
       status: 'untranslatedReferencesFound',
       data: {
         references: untranslatedReferences,
         cleanDuplicate: duplicate,
         language
       }
-    }
+    })
   }
 }
 
-/** @param {{ client: import('sanity').SanityClient, original: any, language: string, schema:any }} props */
+/**
+ * @arg {{
+ *   client: SanityClient,
+ *   original: MultiLanguageDocument,
+ *   language: string,
+ *   schema: Schema
+ * }} props
+ * @returns {Promise<MultiLanguageDocument>}
+ */
 async function createDuplicateTranslation({ client, original, language, schema }) {
   const { _id, _createdAt, _rev, _updatedAt, ...document } = original
   const { translationId } = document
@@ -480,9 +614,17 @@ async function createDuplicateTranslation({ client, original, language, schema }
     })
   ])
 
-  return duplicate
+  return /** @type {MultiLanguageDocument} */ (duplicate)
 }
 
+/**
+ * @arg {SanityDocument} document
+ * @arg {string} language
+ * @arg {{
+ *   client: SanityClient,
+ *   schema: Schema,
+ * }} config
+ */
 async function findUntranslatedReferences(document, language, { client, schema }) {
   // Because the referenceIds are _id's, read from their respective documents,
   // it's possible that they are prefixed with 'drafts.' and do not have a
@@ -490,9 +632,11 @@ async function findUntranslatedReferences(document, language, { client, schema }
   const referenceIds = getReferences(document).map(x => x._ref)
     .flatMap(x => x.startsWith('drafts.') ? x : [x, 'drafts.' + x])
 
-  const references = await client.fetch(
-    groq`*[_id in $ids] { title, translationId, _type, _id }`,
-    { ids: referenceIds }
+  const references = /** @type {{ title: string, translationId: string, _type: string, _id: string }[]} */ (
+    await client.fetch(
+      groq`*[_id in $ids] { title, translationId, _type, _id }`,
+      { ids: referenceIds }
+    )
   )
 
   const untranslatedReferences = (
@@ -508,11 +652,19 @@ async function findUntranslatedReferences(document, language, { client, schema }
           return count > 0 ? null : x
         })
     )
-  ).filter(Boolean)
+  ).filter(isNotNull)
 
   return untranslatedReferences
 }
 
+/** @template T @arg {T} x @returns {x is Exclude<T, null>} */
+function isNotNull(x) { return Boolean(x) }
+
+/**
+ * @arg {SanityDocument} doc
+ * @arg {string} language
+ * @arg {{ schema: Schema }} config
+ */
 function generateNewDocumentId(doc, language, { schema }) {
   const customIdGenerator = schema.get(doc._type)?.options?.kaliber?.multiLanguageNewDocumentId
   return customIdGenerator
@@ -520,6 +672,10 @@ function generateNewDocumentId(doc, language, { schema }) {
     : 'drafts.' + uuid.v4()
 }
 
+/**
+ * @arg {any} data
+ * @returns {{ _ref: string }[]}
+ */
 function getReferences(data) {
   if (!data || typeof data !== 'object') return []
   if (isReference(data)) return [data]
@@ -527,6 +683,16 @@ function getReferences(data) {
   return Object.values(data).flatMap(getReferences)
 }
 
+/**
+ * @template T
+ * @arg {any} data
+ * @arg {string} language
+ * @arg {{
+ *   client: SanityClient,
+ *   schema: Schema,
+ * }} config
+ * @returns {Promise<T | ArrayItem<T>[] | { [k: keyof T]: T[keyof T] }>}
+ */
 async function cloneAndPointReferencesToTranslatedDocument(data, language, { client, schema }) {
   if (!data || typeof data !== 'object')
     return data
@@ -543,6 +709,14 @@ async function cloneAndPointReferencesToTranslatedDocument(data, language, { cli
   )
 }
 
+/**
+ * @arg {{ _ref: string, _strengthenOnPublish?: boolean }} reference
+ * @arg {string} language
+ * @arg {{
+ *   client: SanityClient,
+ *   schema: Schema,
+ * }} config
+ */
 async function pointToTranslatedDocument(reference, language, { client, schema }) {
   const referencedDoc = await client.fetch(
     groq`*[_id == $ref || _id == 'drafts.' + $ref][0] { _type, translationId }`,
@@ -555,10 +729,10 @@ async function pointToTranslatedDocument(reference, language, { client, schema }
   if (!typeHasLanguage({ schema, schemaType: referencedDoc._type }))
     return reference // This document is not translatable (e.g.: images)
 
-  const ids = await client.fetch(
+  const ids = /** @type {string[]} */ (await client.fetch(
     groq`*[translationId == $translationId && language == $language]._id`,
     { translationId: referencedDoc.translationId, language }
-  )
+  ))
 
   if (!ids.length) throw new Error('Cannot translate reference with id ' + reference._ref)
 
@@ -578,26 +752,50 @@ async function pointToTranslatedDocument(reference, language, { client, schema }
   }
 }
 
+/** @arg {any} x @returns {x is { _ref: string }} */
 function isReference(x) { return Boolean(x) && typeof x === 'object' && x._ref }
 
+/**
+ * @template {string} K
+ * @template V
+ * @template R
+ * @arg {Record<K, V>} obj
+ * @arg {(value: V, index: number, array: [string, any][]) => R} asyncMapFn
+ * @returns {Promise<Record<K, R>>}
+ */
 async function mapValuesAsync(obj, asyncMapFn) {
   return Object.entries(obj).reduce(
     async (resultPromise, [key, value], ...rest) => {
       const result = await resultPromise
+      // @ts-ignore
       result[key] = await asyncMapFn(value, ...rest)
       return result
     },
-    Promise.resolve({})
+    /** @type {Promise<Record<K, R>>} */ (Promise.resolve({}))
   )
 }
 
-function mapValues(o, f) {
-  return Object.entries(o).reduce(
-    (result, [k, v]) => (result[k] = f(v, k, o), result), // eslint-disable-line no-return-assign
-    {}
+/**
+ * @template {{ [key: string | number | symbol]: any }} O
+ * @template {(v: O[keyof O], k: keyof O, o: O) => any} F
+ *
+ * @param {O} o
+ * @param {F} f
+ * @returns {{ [key in keyof O]: ReturnType<F> }}
+ */
+export function mapValues(o, f) {
+  // @ts-ignore
+  return Object.fromEntries(
+    Object.entries(o).map(([k, v]) => [k, f(v, k, o)])
   )
 }
 
+/**
+ * @template T
+ * @arg {T} data
+ * @arg {string[]} exclude
+ * @returns {T | ArrayItem<T>[] | { [k: keyof T]: T[keyof T] | void } | void}
+ */
 function removeExcludedReferences(data, exclude) {
   if (!data || typeof data !== 'object') return data
   if (isReference(data) && exclude.map(_id => _id.replace(/^drafts\./, '')).includes(data._ref)) return
