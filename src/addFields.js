@@ -1,28 +1,14 @@
 import { v4 as uuid } from 'uuid' // eslint-disable-line import/no-unresolved
 import { createLanguageFieldComponent } from './components/Language'
 import apiVersion from './apiVersion'
-/** @import { SchemaTypeDefinition, Schema, InitialValueResolverContext, ConditionalPropertyCallbackContext, SanityClient } from 'sanity' */
+/** @import { DocumentDefinition, InitialValueResolverContext, ConditionalPropertyCallbackContext, SanityClient } from 'sanity' */
 /** @import { Config } from './types.ts' */
 
 /** @param {Config} config */
 export function addFields(config) {
   const languageCount = Object.values(config.multiLanguage.languages ?? {}).length
 
-  /**
-   * @template {(
-   *   {
-   *     name: string,
-   *     options?: {
-   *       kaliber?: {
-   *         multiLanguage: boolean
-   *       }
-   *     },
-   *     fields: Array<{ name?: string }>,
-   *   } &
-   *   SchemaTypeDefinition
-   * )} T
-   * @arg {T & Schema} type
-   */
+  /** @arg {DocumentDefinition} type */
   return type => {
     if (!type.options?.kaliber?.multiLanguage) return type
     if (type.fields.some(x => ['language', 'translationId'].includes(x.name || ''))) {

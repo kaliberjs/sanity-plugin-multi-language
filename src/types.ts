@@ -1,4 +1,4 @@
-import type { SanityClient, CurrentUser, Schema } from 'sanity'
+import type { SanityClient, CurrentUser, DocumentDefinition } from 'sanity'
 
 export type Config = {
   reportError(error: any): void,
@@ -15,7 +15,7 @@ export type Config = {
   getDefaultLanguage?(params: {
     sanityClient: SanityClient,
     currentUser: CurrentUser | null,
-    schema: Schema
+    schema: DocumentDefinition
   }): Promise<string>
 }
 
