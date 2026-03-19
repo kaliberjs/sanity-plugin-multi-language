@@ -1,5 +1,7 @@
 export type Config = {
   reportError(error: any): void,
+  languageFieldTitle?: string,
+  translationIdFieldTitle?: string,
   multiLanguage: {
     languages: {
       [language: string]: {

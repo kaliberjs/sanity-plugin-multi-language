@@ -16,7 +16,7 @@ export function addFields(config) {
       ...type,
       fields: [
         {
-          title: 'Taal',
+          title: config.languageFieldTitle ?? 'Taal',
           name: 'language',
           type: 'string',
           readOnly: true,
@@ -34,7 +34,7 @@ export function addFields(config) {
           },
         },
         {
-          title: 'Vertalings ID',
+          title: config.translationIdFieldTitle ?? 'Vertalings ID',
           name: 'translationId',
           type: 'string',
           of: [{ type: 'string' }],
