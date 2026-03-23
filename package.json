@@ -9,6 +9,7 @@
   ],
   "license": "MIT",
   "main": "src/sanityPluginMultiLanguage.js",
+  "type": "module",
   "files": [
     "src/**",
     "sanity.json",
@@ -21,7 +22,7 @@
     "access": "public"
   },
   "scripts": {
-    "prepare": "[ -f scripts/addPeerDependencies.js ] && node scripts/addPeerDependencies.js"
+    "postinstall": "[ -d ./scripts -a -f ./scripts/install-peer-dependencies-for-typescript.js ] && node ./scripts/install-peer-dependencies-for-typescript.js || true"
   },
   "dependencies": {
     "@sanity/incompatible-plugin": "^1.0.4"
