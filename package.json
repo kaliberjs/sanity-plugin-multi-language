@@ -15,17 +15,13 @@
     "sanity.json",
     "LICENSE",
     "package.json",
-    "readme.md",
-    "v2-incompatible.js"
+    "readme.md"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "postinstall": "[ -d ./scripts -a -f ./scripts/install-peer-dependencies-for-typescript.js ] && node ./scripts/install-peer-dependencies-for-typescript.js || true"
-  },
-  "dependencies": {
-    "@sanity/incompatible-plugin": "^1.0.4"
   },
   "peerDependencies": {
     "@sanity/icons": "^5.2.1",
