@@ -117,19 +117,19 @@ _config.multiLanguage_
 
 In this plugin:
 ```
-> yarn
-> yarn link
+> pnpm
+> pnpm pack
 ```
 
 In your project:
 ```
-> yarn link @kaliber/sanity-plugin-multi-language
+> file:[LINK_TO_TGZ_FILE]
 ```
 
 ## Publish
 
 ```
-yarn publish
+pnpm publish
 git push
 git push --tags
 ```

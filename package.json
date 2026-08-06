@@ -1,6 +1,6 @@
 {
   "name": "@kaliber/sanity-plugin-multi-language",
-  "version": "4.4.0",
+  "version": "5.0.0",
   "description": "Document level translations.",
   "keywords": [
     "sanity",
@@ -15,8 +15,7 @@
     "sanity.json",
     "LICENSE",
     "package.json",
-    "readme.md",
-    "v2-incompatible.js"
+    "readme.md"
   ],
   "publishConfig": {
     "access": "public"
@@ -24,17 +23,14 @@
   "scripts": {
     "postinstall": "[ -d ./scripts -a -f ./scripts/install-peer-dependencies-for-typescript.js ] && node ./scripts/install-peer-dependencies-for-typescript.js || true"
   },
-  "dependencies": {
-    "@sanity/incompatible-plugin": "^1.0.4"
-  },
   "peerDependencies": {
-    "@sanity/icons": "^3.7.4",
-    "@sanity/ui": "^3.1.10",
-    "@tanstack/react-query": "^5.90.5",
-    "country-flag-icons": "^1.5.21",
-    "groq": "^4.10.3",
-    "sanity": "^4.10.3",
-    "uuid": "^13.0.0"
+    "@sanity/icons": "^5.0.0",
+    "@sanity/ui": "^3.5.1",
+    "@tanstack/react-query": "^5.101.4",
+    "country-flag-icons": "^1.6.20",
+    "groq": "^6.0.0",
+    "sanity": "^6.0.0",
+    "uuid": "^14.0.0"
   },
   "devDependencies": {}
 }
