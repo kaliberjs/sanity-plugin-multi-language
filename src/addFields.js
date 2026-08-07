@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid'
 import { createLanguageFieldComponent } from './components/Language'
+import { createSyncFieldWrapper } from './components/SyncFieldWrapper'
 import apiVersion from './apiVersion'
 
 /** @param {import('./types').Config} config */
@@ -12,8 +13,30 @@ export function addFields(config) {
       throw new Error(`Your '${type.name}' schema already contains a \`language\` or \`translationId\` field. Remove these fields before enabling multiLanguage.`)
     }
 
+    const syncFieldNames = []
+    const transformedFields = (type.fields ?? []).map(field => {
+      if (field.options?.syncAcrossTranslations) {
+        syncFieldNames.push(field.name)
+        return {
+          ...field,
+          components: {
+            ...field.components,
+            input: createSyncFieldWrapper(field.components?.input)
+          }
+        }
+      }
+      return field
+    })
+
     return {
       ...type,
+      options: {
+        ...type.options,
+        kaliber: {
+          ...type.options?.kaliber,
+          syncFieldNames
+        }
+      },
       fields: [
         {
           title: config.languageFieldTitle ?? 'Taal',
@@ -47,11 +70,12 @@ export function addFields(config) {
             }
           },
         },
-        ...type.fields ?? []
+        ...transformedFields
       ]
     }
   }
 }
+
 
 async function getParentRefLanguageHack(client) {
   const segments = decodeURIComponent(window.location.pathname).split(';')
