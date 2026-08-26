@@ -25,12 +25,15 @@
   },
   "peerDependencies": {
     "@sanity/icons": "^5.0.0",
-    "@sanity/ui": "^3.5.1",
+    "@sanity/ui": "^4.0.0",
+    "react": "^19.0.0",
+    "sanity": "^6.0.0"
+  },
+  "devDependencies": {},
+  "dependencies": {
     "@tanstack/react-query": "^5.101.4",
     "country-flag-icons": "^1.6.20",
     "groq": "^6.0.0",
-    "sanity": "^6.0.0",
     "uuid": "^14.0.0"
-  },
-  "devDependencies": {}
+  }
 }
