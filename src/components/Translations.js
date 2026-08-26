@@ -5,7 +5,8 @@ import groq from 'groq'
 import { useEditState, useSchema, useClient, Preview as SanityPreview } from 'sanity'
 import { useRouter } from 'sanity/router'
 import { usePaneRouter } from 'sanity/structure'
-import { Container, Stack, Flex, Box, Inline, Card, Dialog, Grid, Text, Spinner, Button, Tooltip } from '@sanity/ui'
+import { Container, Stack, Flex, Box, Inline, Card, Dialog, Grid, Text, Spinner, Button } from '@sanity/ui'
+import { Tooltip } from '@sanity/ui/tooltip'
 import { DocumentsIcon } from '@sanity/icons/Documents'
 import { ComposeIcon } from '@sanity/icons/Compose'
 import { EditIcon } from '@sanity/icons/Edit'
@@ -73,7 +74,7 @@ function Translations({ document: { displayed: document, draft, published }, opt
       sizing='border'
       width={1}
     >
-      <Stack space={2}>
+      <Stack gap={2}>
         <Text weight='semibold'>Translations</Text>
 
         {isLoading && (
@@ -263,7 +264,7 @@ function Languages({ original, translations, languages, onTranslateFresh, onTran
 
 function Language({ country, title, children }) {
   return (
-    <Stack as='li' space={2}>
+    <Stack as='li' gap={2}>
       <Flex align='center' gap={2}>
         <div style={{ fontSize: '0.66em' }}>
           <Flag {...{ country }} />
@@ -305,7 +306,7 @@ function MissingTranslationsDialog({ documents, onClose, onContinue }) {
       width={1}
       header='Caution'
       footer={
-        <Grid columns={2} gap={2} paddingX={4} paddingY={3}>
+        <Grid gridTemplateColumns={2} gap={2} paddingX={4} paddingY={3}>
           <Button onClick={onClose} mode='ghost' style={{ textAlign: 'center' }}>Cancel</Button>
           <Button tone='critical' onClick={onContinue} style={{ textAlign: 'center' }}>Continue</Button>
         </Grid>
@@ -313,7 +314,7 @@ function MissingTranslationsDialog({ documents, onClose, onContinue }) {
       {...{ onClose }}
     >
       <Box padding={4}>
-        <Stack space={4}>
+        <Stack gap={4}>
           <Text>
             There are references to untranslated documents:
           </Text>
@@ -355,7 +356,7 @@ function Preview({ document }) {
           <SanityPreview value={document} {...{ schemaType }} />
         </Box>
         <Box>
-          <Inline space={4}>
+          <Inline gap={4}>
             <StatusPublished {...{ published }} />
             <StatusEdited edited={draft} />
           </Inline>
