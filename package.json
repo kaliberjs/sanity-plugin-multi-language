@@ -1,6 +1,6 @@
 {
   "name": "@kaliber/sanity-plugin-multi-language",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "description": "Document level translations.",
   "keywords": [
     "sanity",
