@@ -16,8 +16,6 @@ import { getCountryFromIcu } from '../machinery/getCountryFromIcu'
 import { typeHasLanguage } from '../typeHasLanguage'
 import apiVersion from '../apiVersion'
 
-import styles from './Translations.css'
-
 /** @typedef {{ references: any, cleanDuplicate: any, language: string }} UntranslatedReferenceInfo */
 
 export { TranslationsWithQueryClient as Translations }
@@ -232,7 +230,7 @@ function useCloseChildPanes() {
 
 function Languages({ original, translations, languages, onTranslateFresh, onTranslateDuplicate }) {
   return (
-    <ul className={styles.languages}>
+    <ul style={{ padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '1em' }}>
       {Object.keys(languages)
         .filter(x => x !== original.language)
         .map(language => {
@@ -270,9 +268,7 @@ function Language({ country, title, children }) {
           <Flag {...{ country }} />
         </div>
 
-        <div className={styles.languageTitle}>
-          <Text size={1}>{title}</Text>
-        </div>
+        <Text size={1}>{title}</Text>
       </Flex>
 
       {children}
@@ -402,7 +398,7 @@ function StatusBase({ tooltip, tone, dimmed, icon: Icon }) {
       placement="top"
       portal
     >
-      <Card className={styles.iconCard} data-dimmed={dimmed} style={{ background: 'transparent' }} {...{ tone }}>
+      <Card style={{ background: 'transparent', opacity: dimmed ? 0.3 : undefined }} {...{ tone }}>
         <Text size={1}>
           <Icon/>
         </Text>
